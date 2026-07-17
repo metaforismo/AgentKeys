@@ -14,13 +14,9 @@ struct ControlDeckView: View {
                 DeckBackground()
 
                 ScrollView {
-                    VStack(spacing: 11) {
-                        header
-                        hardwareDeck
-                    }
-                    .padding(.horizontal, 13)
-                    .padding(.top, 5)
-                    .padding(.bottom, 30)
+                    deviceSurface
+                        .padding(.top, 20)
+                        .padding(.bottom, 24)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -53,6 +49,17 @@ struct ControlDeckView: View {
             }
             .sensoryFeedback(.selection, trigger: store.selectedAgentID)
         }
+    }
+
+    private var deviceSurface: some View {
+        DeviceControlSurface(
+            store: store,
+            recorder: recorder,
+            onOpenControls: { activeSheet = .controls },
+            onOpenBranch: { activeSheet = .branch },
+            onOpenSettings: { activeSheet = .settings }
+        )
+        .padding(.horizontal, 12)
     }
 
     private var header: some View {
@@ -872,6 +879,16 @@ private struct ProviderControlSheet: View {
                             }
                             .padding(12)
                             .background(.white.opacity(0.78), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+
+                        if !agent.capabilities.workflows.isEmpty {
+                            controlGroup(title: "Macros", detail: "Run a provider-supported workflow on the selected agent.") {
+                                ForEach(agent.capabilities.workflows, id: \.self) { workflow in
+                                    SessionActionButton(title: workflow.label, systemImage: workflow.systemImage) {
+                                        Task { await store.run(workflow) }
+                                    }
+                                }
+                            }
                         }
 
                         if agent.capabilities.supportsResume || agent.capabilities.supportsFork {
