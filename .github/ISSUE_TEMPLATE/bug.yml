@@ -1,0 +1,58 @@
+name: Bug report
+description: Report a reproducible problem in the iOS app or companion.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping make AgentKeys more reliable. Please remove credentials and captured prompts from logs and screenshots.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - iOS app
+        - Mac companion
+        - Protocol or adapter API
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the actual behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Start AgentKeys in...
+        2. Connect to...
+        3. Trigger...
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Environment
+      description: Include AgentKeys commit or release, iOS/macOS version, Xcode version, and Node.js version when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Add screenshots or logs only after removing tokens, private prompts, file paths, and other sensitive data.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: I removed credentials and private prompt content from the report.
+          required: true

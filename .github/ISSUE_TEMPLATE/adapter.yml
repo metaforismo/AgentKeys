@@ -1,0 +1,41 @@
+name: Adapter proposal
+description: Propose or report compatibility evidence for a coding-agent adapter.
+title: "[Adapter]: "
+labels:
+  - adapter
+body:
+  - type: input
+    id: harness
+    attributes:
+      label: Coding harness and version
+      placeholder: Product name and exact tested version
+    validations:
+      required: true
+  - type: textarea
+    id: lifecycle
+    attributes:
+      label: Verified lifecycle surface
+      description: Identify the documented hooks, events, or APIs used to derive agent state.
+    validations:
+      required: true
+  - type: textarea
+    id: actions
+    attributes:
+      label: Supported actions
+      description: List the AgentKeys actions supported and explain how each maps to the harness.
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Permission preservation
+      description: Explain how the adapter preserves the harness's native approval and denial boundaries.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reproducible evidence
+      description: Link tests or provide sanitized steps that another contributor can run.
+    validations:
+      required: true

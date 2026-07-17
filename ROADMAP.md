@@ -15,7 +15,6 @@
 
 - [ ] Codex adapter using documented, verified lifecycle surfaces
 - [ ] Claude Code adapter using documented hooks
-- [ ] Herdr adapter
 - [ ] OpenMicro interoperability experiment
 - [ ] Adapter contract tests and compatibility matrix
 
@@ -26,4 +25,3 @@
 - [ ] Multi-Mac profiles and per-device revocation
 - [ ] Customizable key layouts and six layers
 - [ ] Apple Watch glance view
-

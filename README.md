@@ -1,35 +1,65 @@
-<p align="center"><img src="assets/agentkeys-hero.png" alt="A translucent AgentKeys control deck with approve, reject, terminal, microphone, and status keys" width="100%"></p>
-
 # AgentKeys
 
-An open-source, tactile iPhone control surface for coding agents.
+<p align="center">
+  <strong>An open-source, tactile iPhone control surface for coding agents.</strong>
+</p>
 
-AgentKeys turns the phone already on your desk into a compact agent console: see which tasks are idle, thinking, complete, waiting for input, or failing; select an agent; send a prompt; and issue explicit approve, reject, interrupt, and new-chat actions.
+<p align="center">
+  <a href="https://github.com/metaforismo/AgentKeys/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/metaforismo/AgentKeys/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="iOS 17 or newer" src="https://img.shields.io/badge/iOS-17%2B-111111?logo=apple">
+  <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-2ea44f"></a>
+</p>
 
-<p align="center"><img src="assets/agentkeys-simulator.png" alt="AgentKeys running on an iPhone simulator with five distinct agent states and command keys" width="420"></p>
+<p align="center">
+  <a href="assets/agentkeys-simulator.png"><img src="assets/agentkeys-simulator.png" alt="AgentKeys running on an iPhone simulator, showing five coding agents in thinking, needs input, complete, idle, and error states" width="390"></a>
+</p>
+
+<p align="center"><sub>Actual AgentKeys build running on an iPhone 17 Pro simulator.</sub></p>
+
+AgentKeys turns the phone already on your desk into a compact console for agent work. See which tasks are active, waiting, complete, or failing; select an agent; dictate or type a prompt; and send explicit approve, reject, interrupt, and new-chat actions.
 
 > [!IMPORTANT]
-> AgentKeys is an independent community project. It is not affiliated with or endorsed by OpenAI, Anthropic, Work Louder, Herdr, or Tailscale. “Codex” and other product names belong to their respective owners.
+> AgentKeys is an independent community project. It is not affiliated with or endorsed by OpenAI, Anthropic, Work Louder, or Tailscale. Product names belong to their respective owners.
 
 ## What works today
 
-- Native SwiftUI control deck for iPhone and iPad, with tactile animation, haptics, and five transparent single-element status assets.
-- Live status polling through the local companion protocol.
+- Native SwiftUI control deck for iPhone and iPad.
+- Five visually distinct agent states: `idle`, `thinking`, `complete`, `needs_input`, and `error`.
+- Live status polling through a small, documented local protocol.
 - Semantic action queue: `approve`, `reject`, `interrupt`, `new_chat`, and `prompt`.
-- Push-to-talk speech transcription using Apple Speech APIs.
-- Interactive offline demo, so the app is useful before pairing.
-- Dependency-free Node companion with separate phone and harness credentials.
-- Harness-facing endpoints for registering agents and retrieving queued actions.
+- Push-to-talk transcription using Apple's Speech framework.
+- Interactive offline demo with tactile animation and haptics.
+- Dependency-free Node.js companion with separate phone and adapter credentials.
+- Adapter-facing endpoints for registering agents and retrieving queued actions.
 
-The repository does **not** yet claim automatic Codex or Claude Code approval integration. Those adapters must translate each harness's verified lifecycle events and permission model into the documented protocol. Unknown actions are rejected rather than converted into guessed keystrokes.
+The repository does **not** claim automatic Codex or Claude Code approval integration yet. An adapter must translate verified lifecycle events and preserve each coding harness's native permission model. Unknown actions are rejected instead of becoming guessed keystrokes or arbitrary shell commands.
 
-### Dictation baseline
+## How it works
 
-Dictation currently uses Apple's native Speech framework: your iPhone acts as the microphone, partial transcription appears directly in the prompt field, and no AgentKeys speech backend is required. This is the baseline we will test before considering a WhisprFlow-like streaming pipeline. See [the voice evaluation plan](docs/voice-pipeline.md).
+```text
+┌──────────────────────┐   authenticated HTTP(S)      ┌──────────────────────┐
+│ AgentKeys for iOS    │ ────────────────────────────► │ Local Mac companion  │
+│ status + commands    │ ◄──────────────────────────── │ semantic queue only  │
+└──────────────────────┘                               └──────────┬───────────┘
+                                                                  │ adapter API
+                                                       ┌──────────▼───────────┐
+                                                       │ Coding-agent adapter │
+                                                       │ Codex / Claude / ... │
+                                                       └──────────────────────┘
+```
 
-## Quick start
+The iOS app never submits shell text for execution. It sends a typed action vocabulary to the companion. A local adapter decides which actions its coding harness supports and how they map to that harness.
 
-Requirements: macOS, Xcode 26+, iOS 17+, Node.js 20+, and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+Read the [protocol](docs/protocol.md) and [security model](SECURITY.md) before building an adapter.
+
+## Run the iOS app
+
+Requirements:
+
+- macOS with Xcode 26 or newer
+- iOS 17 or newer
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 
 ```sh
 git clone https://github.com/metaforismo/AgentKeys.git
@@ -38,7 +68,11 @@ xcodegen generate
 open AgentKeys.xcodeproj
 ```
 
-The app opens in interactive demo mode. To use the live companion:
+Build and run the `AgentKeys` scheme. The app starts in an interactive demo, so no connector or credentials are required to explore the interface.
+
+## Run the Mac companion
+
+The reference companion requires Node.js 20 or newer and has no runtime dependencies.
 
 ```sh
 cd connector
@@ -48,44 +82,46 @@ AGENTKEYS_INTEGRATION_TOKEN='replace-with-a-different-long-random-token' \
 node src/cli.mjs --demo
 ```
 
-The default companion listens on loopback only. For an iPhone on Tailscale, bind to the Mac's Tailscale IP and opt in explicitly:
+It listens on loopback by default. To connect an iPhone through a private Tailscale network, bind to the Mac's Tailscale address explicitly:
 
 ```sh
 node src/cli.mjs --host 100.x.y.z --allow-network
 ```
 
-Enter the transport, host, port, and printed phone token in AgentKeys settings. Use **Local HTTP** only for loopback or a private Tailscale connection; select **HTTPS** when the companion is behind a TLS endpoint. Never expose port `7777` directly to the public internet.
+Enter the transport, host, port, and printed phone token in AgentKeys settings. Use **Local HTTP** only for loopback or a private encrypted tunnel. Select **HTTPS** when the companion is behind a TLS endpoint. Never expose port `7777` directly to the public internet.
 
-## Architecture
+## Voice input
 
-```text
-┌──────────────────────┐   authenticated HTTP(S)      ┌──────────────────────┐
-│ AgentKeys iOS        │ ────────────────────────────► │ Local Mac companion  │
-│ status + commands    │ ◄──────────────────────────── │ semantic queue only  │
-└──────────────────────┘                               └──────────┬───────────┘
-                                                                  │ adapter API
-                                                       ┌──────────▼───────────┐
-                                                       │ Harness adapter      │
-                                                       │ Codex / Claude / ... │
-                                                       └──────────────────────┘
-```
+Dictation currently uses Apple's native Speech framework. The iPhone acts as the microphone, and partial transcription appears directly in the selected agent's prompt field without an AgentKeys speech backend.
 
-The iOS app never sends shell text. It sends a small, typed action vocabulary. A harness adapter decides whether an action is supported and how it maps into the harness. See [the protocol](docs/protocol.md) and [security model](SECURITY.md).
+This is the measured baseline. A streaming transcription service should replace it only if controlled tests show meaningfully better technical-token accuracy or latency. See the [voice evaluation plan](docs/voice-pipeline.md).
+
+## Design
+
+<p align="center"><img src="assets/agentkeys-hero.png" alt="AgentKeys visual identity with translucent tactile controls" width="100%"></p>
+
+The interface borrows the satisfying clarity of a physical macro pad while remaining a phone-native tool. Agent status is communicated through icon, text, and color so the meaning does not depend on color alone.
+
+Generated visual assets and their reproducible processing steps are documented in [assets/GENERATED_ASSETS.md](assets/GENERATED_ASSETS.md).
 
 ## Project status
 
-AgentKeys is an early foundation release. The control surface and companion protocol are functional; production harness adapters, Bonjour pairing, encrypted local transport outside Tailscale, and background notifications are next. See [the roadmap](ROADMAP.md).
-
-## Inspiration
-
-The project was inspired by the tactile multi-agent ideas behind Codex Micro, community iOS experiments built around Herdr, and [stephenleo/OpenMicro](https://github.com/stephenleo/OpenMicro). OpenMicro focuses on physical game controllers and terminal harnesses; AgentKeys focuses on a phone-native UI and a deliberately small interoperability protocol.
+AgentKeys is an early foundation release. The iOS control surface, local companion, protocol, demo, voice input, and CI are functional. Production coding-agent adapters, secure pairing, durable history, and background notifications remain on the [roadmap](ROADMAP.md).
 
 ## Contributing
 
-Issues and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md). Please do not submit an adapter that guesses approval state or executes arbitrary commands from the phone.
+Issues and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), use the repository templates, and include reproducible evidence for adapter compatibility claims.
+
+Please do not submit an adapter that guesses permission state, bypasses a harness confirmation boundary, or executes arbitrary commands received from the phone.
+
+## Security
+
+Read [SECURITY.md](SECURITY.md) for the trust model and private reporting instructions. The iPhone is deliberately treated as a semantic remote control—not a remote shell.
+
+## Inspiration
+
+AgentKeys was inspired by tactile multi-agent controls such as Codex Micro and the open-source controller experiments in [stephenleo/OpenMicro](https://github.com/stephenleo/OpenMicro). AgentKeys explores the same interaction idea as a phone-native, agent-agnostic interface.
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
-
-The original generated visual assets are documented in [assets/GENERATED_ASSETS.md](assets/GENERATED_ASSETS.md).
+AgentKeys is available under the [MIT License](LICENSE).
