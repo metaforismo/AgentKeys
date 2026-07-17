@@ -22,10 +22,9 @@ jobs:
       - run: npm test
 
   ios:
-    runs-on: macos-15
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - run: brew install xcodegen
       - run: xcodegen generate
-      - run: xcodebuild -project AgentKeys.xcodeproj -scheme AgentKeys -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16 Pro' CODE_SIGNING_ALLOWED=NO test
-
+      - run: xcodebuild -project AgentKeys.xcodeproj -scheme AgentKeys -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.5' -derivedDataPath .build/DerivedData CODE_SIGNING_ALLOWED=NO test
