@@ -98,9 +98,7 @@ struct AgentKey: View {
     }
 
     private var harnessIcon: String {
-        agent.harness.localizedCaseInsensitiveContains("codex")
-            ? "chevron.left.forwardslash.chevron.right"
-            : "sparkles"
+        agent.provider.systemImage
     }
 }
 

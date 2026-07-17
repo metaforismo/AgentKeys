@@ -36,7 +36,9 @@ Queues one semantic action. `requestID` makes retries idempotent.
 }
 ```
 
-Allowed actions are `approve`, `reject`, `interrupt`, `new_chat`, and `prompt`. No `shell`, `keys`, or arbitrary executable action exists.
+Core actions are `approve`, `reject`, `interrupt`, `new_chat`, and `prompt`. No `shell`, `keys`, or arbitrary executable action exists.
+
+Provider-aware semantic controls add `set_mode`, `set_effort`, `set_speed`, `create_branch`, and `workflow`. These actions require a bounded `text` value advertised by the target agent's capabilities. `create_branch` accepts only a validated branch name; it never accepts a command line.
 
 ## Harness adapter endpoints
 
@@ -50,9 +52,25 @@ Creates or updates an agent session.
   "name": "Codex",
   "harness": "Codex CLI",
   "task": "Run focused tests",
-  "status": "thinking"
+  "status": "thinking",
+  "provider": "codex",
+  "mode": "plan",
+  "effort": "high",
+  "speed": "fast",
+  "branch": "feat/focused-tests",
+  "capabilities": {
+    "modes": ["manual", "plan"],
+    "efforts": ["low", "medium", "high", "xhigh"],
+    "speeds": ["standard", "fast"],
+    "workflows": ["review_pr", "debug", "refactor", "tests"],
+    "supportsBranch": true
+  }
 }
 ```
+
+`provider` is `codex`, `claude_code`, or `generic`. Older adapters may omit the new control fields; the iOS client infers a conservative profile from `harness`. New adapters should publish explicit capabilities and current values so the deck never offers unsupported controls.
+
+Claude Code adapters must not advertise or translate `bypassPermissions`. AgentKeys' built-in Claude profile is limited to `manual`, `accept_edits`, `plan`, and `auto`. An adapter must preserve the harness's own policy and may reject any queued action that is invalid in the current session.
 
 ### `GET /v1/integrations/actions?agentID=<uuid>`
 

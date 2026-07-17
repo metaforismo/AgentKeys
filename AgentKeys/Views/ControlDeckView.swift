@@ -3,6 +3,7 @@ import SwiftUI
 struct ControlDeckView: View {
     @Bindable var store: AgentStore
     @State private var recorder = SpeechPromptRecorder()
+    @State private var activeSheet: DeckSheet?
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
@@ -24,8 +25,15 @@ struct ControlDeckView: View {
                 .scrollIndicators(.hidden)
             }
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $store.isSettingsPresented) {
-                ConnectorSettingsView(store: store)
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .controls:
+                    ProviderControlSheet(store: store)
+                case .branch:
+                    BranchControlSheet(store: store)
+                case .settings:
+                    ConnectorSettingsView(store: store)
+                }
             }
             .task { store.startPolling() }
             .onDisappear { store.stopPolling() }
@@ -65,13 +73,29 @@ struct ControlDeckView: View {
 
             Spacer()
 
-            Button {
-                store.isSettingsPresented = true
-            } label: {
-                RotaryControl()
+            HStack(spacing: 8) {
+                Button {
+                    activeSheet = .controls
+                } label: {
+                    RotaryControl()
+                }
+                .buttonStyle(TactileButtonStyle())
+                .accessibilityLabel("Agent mode and effort controls")
+
+                Button {
+                    activeSheet = .settings
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 34, height: 34)
+                        .background(.white.opacity(0.72), in: Circle())
+                        .overlay { Circle().stroke(.white, lineWidth: 1) }
+                        .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
+                }
+                .buttonStyle(TactileButtonStyle())
+                .accessibilityLabel("Connector settings")
             }
-            .buttonStyle(TactileButtonStyle())
-            .accessibilityLabel("Connector settings")
         }
         .padding(.horizontal, 2)
     }
@@ -101,6 +125,8 @@ struct ControlDeckView: View {
                 }
 
                 selectedAgentModule
+                capabilityControls
+                workflowConsole
                 DeckDivider(accent: activeAccent)
 
                 HardwareSectionHeader(
@@ -113,10 +139,10 @@ struct ControlDeckView: View {
                     CommandKey(title: "Interrupt", systemImage: "bolt.fill", tint: .primary) {
                         Task { await store.perform(.interrupt) }
                     }
-                    CommandKey(title: "Reject", systemImage: "xmark", tint: .red) {
+                    CommandKey(title: rejectLabel, systemImage: "xmark", tint: .red) {
                         Task { await store.perform(.reject) }
                     }
-                    CommandKey(title: "Approve", systemImage: "checkmark", tint: .green) {
+                    CommandKey(title: approveLabel, systemImage: "checkmark", tint: .green) {
                         Task { await store.perform(.approve) }
                     }
                     CommandKey(title: "New", systemImage: "plus.bubble", tint: .blue) {
@@ -165,9 +191,15 @@ struct ControlDeckView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(store.selectedAgent?.name ?? "No agent selected")
-                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .lineLimit(1)
+                HStack(spacing: 7) {
+                    Text(store.selectedAgent?.name ?? "No agent selected")
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .lineLimit(1)
+
+                    if let provider = store.selectedAgent?.provider {
+                        ProviderBadge(provider: provider)
+                    }
+                }
 
                 Text(store.selectedAgent?.task ?? "Connect a companion to see active work.")
                     .font(.system(.callout, design: .rounded))
@@ -191,6 +223,58 @@ struct ControlDeckView: View {
                         .stroke(.white.opacity(0.76), lineWidth: 1)
                 }
                 .shadow(color: .black.opacity(0.07), radius: 2, y: -1)
+        }
+    }
+
+    private var capabilityControls: some View {
+        HStack(spacing: 8) {
+            MiniControlKey(
+                eyebrow: "MODE",
+                value: store.selectedAgent?.mode.label ?? "—",
+                systemImage: "switch.2"
+            ) {
+                Task { await store.cycleMode() }
+            }
+
+            MiniControlKey(
+                eyebrow: "SPEED",
+                value: store.selectedAgent?.speed.label ?? "—",
+                systemImage: store.selectedAgent?.speed == .fast ? "hare.fill" : "speedometer"
+            ) {
+                Task { await store.cycleSpeed() }
+            }
+            .opacity((store.selectedAgent?.capabilities.speeds.count ?? 0) > 1 ? 1 : 0.54)
+
+            MiniControlKey(
+                eyebrow: "EFFORT",
+                value: store.selectedAgent?.effort.label ?? "—",
+                systemImage: "dial.medium"
+            ) {
+                Task { await store.cycleEffort() }
+            }
+
+            MiniControlKey(
+                eyebrow: "BRANCH",
+                value: store.selectedAgent?.branch ?? "New",
+                systemImage: "arrow.triangle.branch"
+            ) {
+                activeSheet = .branch
+            }
+            .opacity(store.selectedAgent?.capabilities.supportsBranch == true ? 1 : 0.54)
+        }
+    }
+
+    private var workflowConsole: some View {
+        VStack(spacing: 9) {
+            HardwareSectionHeader(
+                title: "Workflow joystick",
+                detail: "Flick to run",
+                systemImage: "dpad"
+            )
+
+            WorkflowPad(workflows: store.selectedAgent?.capabilities.workflows ?? []) { workflow in
+                Task { await store.run(workflow) }
+            }
         }
     }
 
@@ -304,6 +388,22 @@ struct ControlDeckView: View {
         case .failed: .red
         }
     }
+
+    private var approveLabel: String {
+        store.selectedAgent?.provider == .claudeCode ? "Allow" : "Approve"
+    }
+
+    private var rejectLabel: String {
+        store.selectedAgent?.provider == .claudeCode ? "Deny" : "Reject"
+    }
+}
+
+private enum DeckSheet: String, Identifiable {
+    case controls
+    case branch
+    case settings
+
+    var id: String { rawValue }
 }
 
 private struct DeckBackground: View {
@@ -561,6 +661,348 @@ private struct StatusPill: View {
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .background(status.color.opacity(0.10), in: Capsule())
+    }
+}
+
+private struct ProviderBadge: View {
+    let provider: AgentProvider
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: provider.systemImage)
+            Text(provider.shortLabel)
+        }
+        .font(.system(size: 7, weight: .black, design: .rounded))
+        .tracking(0.55)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(.black.opacity(0.045), in: Capsule())
+    }
+}
+
+private struct MiniControlKey: View {
+    let eyebrow: String
+    let value: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.black.opacity(0.12))
+                    .offset(y: 3)
+
+                VStack(spacing: 4) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 13, weight: .semibold))
+
+                    Text(value)
+                        .font(.system(size: 9, weight: .black, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.58)
+
+                    Text(eyebrow)
+                        .font(.system(size: 6, weight: .bold, design: .monospaced))
+                        .tracking(0.45)
+                        .foregroundStyle(.tertiary)
+                }
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .padding(.horizontal, 4)
+                .background {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(LinearGradient(colors: [.white, Color(white: 0.94)], startPoint: .top, endPoint: .bottom))
+                        .overlay { RoundedRectangle(cornerRadius: 14).stroke(.white, lineWidth: 1) }
+                }
+            }
+        }
+        .buttonStyle(TactileButtonStyle())
+        .accessibilityLabel("\(eyebrow.capitalized), \(value)")
+    }
+}
+
+private struct WorkflowPad: View {
+    let workflows: [AgentWorkflow]
+    let action: (AgentWorkflow) -> Void
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
+
+    var body: some View {
+        ZStack {
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(AgentWorkflow.allCases, id: \.self) { workflow in
+                    let supported = workflows.contains(workflow)
+                    Button { action(workflow) } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: workflow.systemImage)
+                                .font(.system(size: 14, weight: .bold))
+                            Text(workflow.label)
+                                .font(.system(size: 10, weight: .black, design: .rounded))
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .foregroundStyle(supported ? Color.primary : Color.secondary)
+                        .padding(.horizontal, 12)
+                        .frame(maxWidth: .infinity, minHeight: 43)
+                        .background {
+                            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                                .fill(LinearGradient(colors: [.white, Color(white: 0.93)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .overlay { RoundedRectangle(cornerRadius: 13).stroke(.white, lineWidth: 1) }
+                                .shadow(color: .black.opacity(0.11), radius: 2, y: 3)
+                        }
+                    }
+                    .buttonStyle(TactileButtonStyle())
+                    .disabled(!supported)
+                    .opacity(supported ? 1 : 0.42)
+                }
+            }
+
+            JoystickPuck()
+                .allowsHitTesting(false)
+        }
+        .padding(10)
+        .background {
+            RoundedRectangle(cornerRadius: 19, style: .continuous)
+                .fill(.black.opacity(0.055))
+                .overlay { RoundedRectangle(cornerRadius: 19).stroke(.white.opacity(0.74), lineWidth: 1) }
+        }
+    }
+}
+
+private struct JoystickPuck: View {
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(.black.opacity(0.22))
+                .frame(width: 33, height: 33)
+                .offset(y: 3)
+
+            Circle()
+                .fill(RadialGradient(colors: [Color(white: 0.28), .black], center: .topLeading, startRadius: 1, endRadius: 17))
+                .overlay { Circle().stroke(.white.opacity(0.22), lineWidth: 1) }
+
+            Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white.opacity(0.72))
+        }
+        .frame(width: 30, height: 30)
+        .shadow(color: .black.opacity(0.26), radius: 5, y: 3)
+    }
+}
+
+private struct ProviderControlSheet: View {
+    @Bindable var store: AgentStore
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    if let agent = store.selectedAgent {
+                        HStack(spacing: 11) {
+                            Image(systemName: agent.provider.systemImage)
+                                .font(.system(size: 20, weight: .bold))
+                                .frame(width: 44, height: 44)
+                                .background(.black, in: RoundedRectangle(cornerRadius: 13))
+                                .foregroundStyle(.white)
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(agent.provider.label)
+                                    .font(.system(.headline, design: .rounded, weight: .bold))
+                                Text(agent.harness)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        controlGroup(title: "Permission mode", detail: modeDetail) {
+                            ForEach(agent.capabilities.modes, id: \.self) { mode in
+                                SelectorCapsule(title: mode.label, selected: agent.mode == mode) {
+                                    Task { await store.perform(.setMode, text: mode.rawValue) }
+                                }
+                            }
+                        }
+
+                        controlGroup(title: "Reasoning effort", detail: "Adapters must report only levels supported by the active model.") {
+                            ForEach(agent.capabilities.efforts, id: \.self) { effort in
+                                SelectorCapsule(title: effort.label, selected: agent.effort == effort) {
+                                    Task { await store.perform(.setEffort, text: effort.rawValue) }
+                                }
+                            }
+                        }
+
+                        if agent.capabilities.speeds.count > 1 {
+                            controlGroup(title: "Speed", detail: "Fast is capability-gated and may change usage or availability.") {
+                                ForEach(agent.capabilities.speeds, id: \.self) { speed in
+                                    SelectorCapsule(title: speed.label, selected: agent.speed == speed) {
+                                        Task { await store.perform(.setSpeed, text: speed.rawValue) }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text("AgentKeys sends typed semantic requests. The local adapter remains responsible for mapping them to a verified harness API and preserving native permission boundaries.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color(red: 0.95, green: 0.96, blue: 0.98))
+            .navigationTitle("Agent controls")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var modeDetail: String {
+        store.selectedAgent?.provider == .claudeCode
+            ? "Safe Claude modes only. Permission bypass is intentionally unavailable."
+            : "Switch between direct work and a plan-first collaboration flow."
+    }
+
+    private func controlGroup<Content: View>(
+        title: String,
+        detail: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title)
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
+            FlowLayout(spacing: 8) { content() }
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct BranchControlSheet: View {
+    @Bindable var store: AgentStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 18) {
+                Label("Isolated work", systemImage: "arrow.triangle.branch")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+
+                TextField("feat/my-change", text: $name)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(.system(.body, design: .monospaced))
+                    .padding(14)
+                    .background(.black.opacity(0.055), in: RoundedRectangle(cornerRadius: 14))
+
+                Text("Queues a validated create-branch or worktree request. The adapter chooses the native mechanism supported by Codex or Claude Code.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    let branch = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    Task { await store.perform(.createBranch, text: branch) }
+                    dismiss()
+                } label: {
+                    Label("Create isolated branch", systemImage: "plus")
+                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.black)
+                .disabled(!isValid)
+
+                Spacer()
+            }
+            .padding(20)
+            .background(Color(red: 0.95, green: 0.96, blue: 0.98))
+            .navigationTitle("Branch / worktree")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .onAppear { name = store.selectedAgent?.branch ?? "" }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var isValid: Bool {
+        let value = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let components = value.split(separator: "/", omittingEmptySubsequences: false)
+        guard (1...80).contains(value.count),
+              !value.hasPrefix("-"), !value.hasPrefix("/"), !value.hasSuffix("/"), !value.hasSuffix("."),
+              !value.contains(".."), !value.contains("//"),
+              !components.contains(where: { $0.hasPrefix(".") || $0.hasSuffix(".lock") }) else { return false }
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/.")
+        return value.unicodeScalars.allSatisfy(allowed.contains)
+    }
+}
+
+private struct SelectorCapsule: View {
+    let title: String
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(.caption, design: .rounded, weight: .bold))
+                .foregroundStyle(selected ? .white : .primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(selected ? Color.black : Color.white, in: Capsule())
+                .overlay { Capsule().stroke(.black.opacity(selected ? 0 : 0.10), lineWidth: 1) }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct FlowLayout: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? 0
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > width {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: width, height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var rowHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
     }
 }
 

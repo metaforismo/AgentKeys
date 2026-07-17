@@ -99,6 +99,30 @@ final class AgentStore {
         }
     }
 
+    func cycleMode() async {
+        guard let agent = selectedAgent,
+              let value = next(after: agent.mode, in: agent.capabilities.modes) else { return }
+        await perform(.setMode, text: value.rawValue)
+    }
+
+    func cycleEffort() async {
+        guard let agent = selectedAgent,
+              let value = next(after: agent.effort, in: agent.capabilities.efforts) else { return }
+        await perform(.setEffort, text: value.rawValue)
+    }
+
+    func cycleSpeed() async {
+        guard let agent = selectedAgent,
+              let value = next(after: agent.speed, in: agent.capabilities.speeds),
+              agent.capabilities.speeds.count > 1 else { return }
+        await perform(.setSpeed, text: value.rawValue)
+    }
+
+    func run(_ workflow: AgentWorkflow) async {
+        guard selectedAgent?.capabilities.workflows.contains(workflow) == true else { return }
+        await perform(.workflow, text: workflow.rawValue)
+    }
+
     func useDemo() {
         stopPolling()
         configuration = .demo
@@ -123,15 +147,42 @@ final class AgentStore {
             agents[index].task = text.flatMap { $0.isEmpty ? nil : $0 } ?? "Voice prompt"
             agents[index].status = .thinking
             prompt = ""
+        case .setMode:
+            if let text, let value = AgentMode(rawValue: text), agents[index].capabilities.modes.contains(value) {
+                agents[index].mode = value
+            }
+        case .setEffort:
+            if let text, let value = AgentEffort(rawValue: text), agents[index].capabilities.efforts.contains(value) {
+                agents[index].effort = value
+            }
+        case .setSpeed:
+            if let text, let value = AgentSpeed(rawValue: text), agents[index].capabilities.speeds.contains(value) {
+                agents[index].speed = value
+            }
+        case .createBranch:
+            agents[index].branch = text
+            agents[index].task = "Preparing isolated branch"
+            agents[index].status = .thinking
+        case .workflow:
+            if let text, let workflow = AgentWorkflow(rawValue: text) {
+                agents[index].task = workflow.label
+                agents[index].status = .thinking
+            }
         }
         agents[index].updatedAt = .now
     }
 
     static let fixtures: [Agent] = [
-        Agent(id: UUID(uuidString: "73659C11-43ED-4AAC-8F18-771B977C6901")!, name: "Codex", harness: "Codex CLI", task: "Implement connector protocol", status: .thinking, updatedAt: .now),
-        Agent(id: UUID(uuidString: "8FB44C64-D268-4728-BDC8-89C0AC9CAAD2")!, name: "Review", harness: "Codex", task: "Review security boundary", status: .needsInput, updatedAt: .now),
-        Agent(id: UUID(uuidString: "FC2E5070-041C-4AD2-A90E-959A34AF3BBF")!, name: "Design", harness: "Claude Code", task: "Polish tactile controls", status: .complete, updatedAt: .now),
+        Agent(id: UUID(uuidString: "73659C11-43ED-4AAC-8F18-771B977C6901")!, name: "Codex", harness: "Codex CLI", task: "Implement connector protocol", status: .thinking, updatedAt: .now, provider: .codex, effort: .high, speed: .fast, branch: "feat/control-deck"),
+        Agent(id: UUID(uuidString: "8FB44C64-D268-4728-BDC8-89C0AC9CAAD2")!, name: "Review", harness: "Codex", task: "Review security boundary", status: .needsInput, updatedAt: .now, provider: .codex, mode: .plan, effort: .xhigh, branch: "review/security"),
+        Agent(id: UUID(uuidString: "FC2E5070-041C-4AD2-A90E-959A34AF3BBF")!, name: "Design", harness: "Claude Code", task: "Polish tactile controls", status: .complete, updatedAt: .now, provider: .claudeCode, mode: .acceptEdits, effort: .high, branch: "design/hardware-ui"),
         Agent(id: UUID(uuidString: "C8C71A25-245B-4EAB-92A3-A03C39A9FA08")!, name: "Docs", harness: "Generic", task: "Waiting for work", status: .idle, updatedAt: .now),
-        Agent(id: UUID(uuidString: "25D4EE53-91E4-4B40-91EE-B33FE5472A2A")!, name: "Tests", harness: "Codex", task: "Simulator smoke test", status: .error, updatedAt: .now)
+        Agent(id: UUID(uuidString: "25D4EE53-91E4-4B40-91EE-B33FE5472A2A")!, name: "Tests", harness: "Codex", task: "Simulator smoke test", status: .error, updatedAt: .now, provider: .codex, effort: .medium, branch: "test/smoke")
     ]
+
+    private func next<T: Equatable>(after current: T, in values: [T]) -> T? {
+        guard !values.isEmpty else { return nil }
+        guard let index = values.firstIndex(of: current) else { return values.first }
+        return values[(index + 1) % values.count]
+    }
 }

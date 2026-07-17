@@ -17,7 +17,7 @@
 
 <p align="center"><sub>Actual AgentKeys build running on an iPhone 17 Pro simulator.</sub></p>
 
-AgentKeys turns the phone already on your desk into a compact console for agent work. See which tasks are active, waiting, complete, or failing; select an agent; dictate or type a prompt; and send explicit approve, reject, interrupt, and new-chat actions.
+AgentKeys turns the phone already on your desk into a compact console for agent work. See which tasks are active, waiting, complete, or failing; select an agent; dictate or type a prompt; and operate a provider-aware control deck for approvals, workflows, modes, effort, speed, and isolated branches.
 
 > [!IMPORTANT]
 > AgentKeys is an independent community project. It is not affiliated with or endorsed by OpenAI, Anthropic, Work Louder, or Tailscale. Product names belong to their respective owners.
@@ -28,12 +28,15 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 - Five visually distinct agent states: `idle`, `thinking`, `complete`, `needs_input`, and `error`.
 - Live status polling through a small, documented local protocol.
 - Semantic action queue: `approve`, `reject`, `interrupt`, `new_chat`, and `prompt`.
+- Capability-driven Codex and Claude Code profiles with provider-specific modes.
+- Tactile workflow pad for PR review, debugging, refactoring, and focused tests.
+- Reasoning-effort dial, Codex fast/standard control, and safe branch/worktree requests.
 - Push-to-talk transcription using Apple's Speech framework.
 - Interactive offline demo with tactile animation and haptics.
 - Dependency-free Node.js companion with separate phone and adapter credentials.
 - Adapter-facing endpoints for registering agents and retrieving queued actions.
 
-The repository does **not** claim automatic Codex or Claude Code approval integration yet. An adapter must translate verified lifecycle events and preserve each coding harness's native permission model. Unknown actions are rejected instead of becoming guessed keystrokes or arbitrary shell commands.
+The repository does **not** claim automatic Codex or Claude Code approval integration yet. An adapter must translate verified lifecycle events and preserve each coding harness's native permission model. Unknown or unadvertised actions are rejected instead of becoming guessed keystrokes or arbitrary shell commands. Claude Code permission bypass is intentionally not part of the protocol.
 
 ## How it works
 
@@ -50,6 +53,10 @@ The repository does **not** claim automatic Codex or Claude Code approval integr
 ```
 
 The iOS app never submits shell text for execution. It sends a typed action vocabulary to the companion. A local adapter decides which actions its coding harness supports and how they map to that harness.
+
+Each agent advertises a capability profile. Codex sessions can expose plan mode, supported reasoning levels, fast mode, and isolated branch workflows. Claude Code sessions can expose its safe permission modes, model-supported effort levels, worktrees, and agent workflows. The UI changes per agent instead of assuming the two harnesses are identical.
+
+The control vocabulary follows current first-party surfaces: [Codex Micro](https://openai.com/supply/co-lab/work-louder/) pairs agent state keys with workflow shortcuts and live reasoning control, while the [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference) documents worktrees, agent monitoring, effort, model, resume, and permission-mode controls. AgentKeys adopts the useful interaction ideas without claiming undocumented integration.
 
 Read the [protocol](docs/protocol.md) and [security model](SECURITY.md) before building an adapter.
 
@@ -106,7 +113,7 @@ Generated visual assets and their reproducible processing steps are documented i
 
 ## Project status
 
-AgentKeys is an early foundation release. The iOS control surface, local companion, protocol, demo, voice input, and CI are functional. Production coding-agent adapters, secure pairing, durable history, and background notifications remain on the [roadmap](ROADMAP.md).
+AgentKeys is an early foundation release. The iOS control surface, capability protocol, local companion, provider-aware demo, voice input, and CI are functional. Production coding-agent adapters, secure pairing, durable history, and background notifications remain on the [roadmap](ROADMAP.md).
 
 ## Contributing
 
@@ -120,7 +127,7 @@ Read [SECURITY.md](SECURITY.md) for the trust model and private reporting instru
 
 ## Inspiration
 
-AgentKeys was inspired by tactile multi-agent controls such as Codex Micro and the open-source controller experiments in [stephenleo/OpenMicro](https://github.com/stephenleo/OpenMicro). AgentKeys explores the same interaction idea as a phone-native, agent-agnostic interface.
+AgentKeys was inspired by tactile multi-agent controls such as [Codex Micro](https://openai.com/supply/co-lab/work-louder/) and the open-source controller experiments in [stephenleo/OpenMicro](https://github.com/stephenleo/OpenMicro). AgentKeys explores the same interaction idea as a phone-native, agent-agnostic interface.
 
 ## License
 

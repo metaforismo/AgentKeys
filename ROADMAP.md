@@ -13,8 +13,13 @@
 
 ## 0.2 — real adapters
 
+- [x] Provider and capability negotiation contract
+- [x] Safe semantic modes, effort, speed, workflow, and branch actions
+- [x] Provider-aware Codex and Claude Code demo controls
 - [ ] Codex adapter using documented, verified lifecycle surfaces
-- [ ] Claude Code adapter using documented hooks
+- [ ] Codex branch/worktree and fast-mode compatibility tests
+- [ ] Claude Code adapter using documented hooks, agent view, and permission surfaces
+- [ ] Claude Code worktree, effort, resume, and permission-mode compatibility tests
 - [ ] OpenMicro interoperability experiment
 - [ ] Adapter contract tests and compatibility matrix
 

@@ -6,11 +6,13 @@ Only the latest release and `main` receive security fixes during the pre-1.0 pha
 
 ## Trust boundary
 
-The iPhone is a remote control, not a remote shell. The companion accepts only five semantic actions, validates all identifiers and sizes, uses constant-time token comparison, rejects unknown actions, caps registered agents and queued actions, rate limits clients, limits request bodies, and separates phone credentials from harness credentials.
+The iPhone is a remote control, not a remote shell. The companion accepts only a closed semantic action vocabulary, validates advertised capabilities, identifiers, values, branch names, and sizes, uses constant-time token comparison, rejects unknown or unsupported actions, caps registered agents and queued actions, rate limits clients, limits request bodies, and separates phone credentials from harness credentials.
 
 The reference companion binds to `127.0.0.1` by default. Binding to another interface requires `--allow-network`. Prefer a specific Tailscale address; do not port-forward the companion to the public internet.
 
 Approval is harness-specific. An adapter must preserve the harness's native permission policy and must not treat a generic “approve” action as authorization for a broader class of future operations.
+
+Claude Code's permission-bypass mode is deliberately excluded. Provider adapters may narrow the published capability profile, but cannot expand the connector's built-in enum vocabulary or turn a semantic value into executable text.
 
 ## Known pre-1.0 limitations
 
