@@ -60,5 +60,4 @@ Atomically drains queued actions for that agent. An adapter should reject unsupp
 
 ## Transport
 
-The reference implementation is plain HTTP because Tailscale already supplies authenticated encryption between enrolled devices. For ordinary Wi-Fi, keep the connector on a trusted network during development; TLS or a mutually authenticated Noise transport is required before treating untrusted LAN use as production-safe.
-
+The reference implementation can use HTTP over loopback or a private Tailscale connection, where Tailscale supplies authenticated encryption between enrolled devices. The iOS client also supports HTTPS for a TLS reverse proxy or Tailscale Serve endpoint. Do not expose the connector directly to the public internet or use plain HTTP on ordinary Wi-Fi.

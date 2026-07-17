@@ -55,3 +55,23 @@ test("rejects arbitrary actions and oversized prompt bodies", async (t) => {
   assert.equal(huge.status, 413);
 });
 
+test("rate limits repeated non-health requests per client", async (t) => {
+  const { server } = createConnectorServer({
+    phoneToken,
+    integrationToken,
+    demo: true,
+    rateLimit: { windowMs: 60_000, max: 2 },
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => server.close());
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}`;
+  const headers = { Authorization: `Bearer ${phoneToken}` };
+
+  assert.equal((await fetch(`${base}/v1/snapshot`, { headers })).status, 200);
+  assert.equal((await fetch(`${base}/v1/snapshot`, { headers })).status, 200);
+  const limited = await fetch(`${base}/v1/snapshot`, { headers });
+  assert.equal(limited.status, 429);
+  assert.equal(limited.headers.get("retry-after"), "60");
+});

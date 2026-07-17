@@ -3,6 +3,7 @@ import SwiftUI
 struct ConnectorSettingsView: View {
     @Bindable var store: AgentStore
     @Environment(\.dismiss) private var dismiss
+    @State private var scheme: ConnectorScheme = .https
     @State private var host = ""
     @State private var port = "7777"
     @State private var token = ""
@@ -11,6 +12,11 @@ struct ConnectorSettingsView: View {
         NavigationStack {
             Form {
                 Section("Mac companion") {
+                    Picker("Transport", selection: $scheme) {
+                        ForEach(ConnectorScheme.allCases, id: \.self) { option in
+                            Text(option.label).tag(option)
+                        }
+                    }
                     TextField("Tailscale IP or hostname", text: $host)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -23,7 +29,7 @@ struct ConnectorSettingsView: View {
                 Section {
                     Button("Connect") {
                         guard let value = Int(port), (1...65535).contains(value) else { return }
-                        store.configuration = ConnectorConfiguration(host: host, port: value, token: token)
+                        store.configuration = ConnectorConfiguration(scheme: scheme, host: host, port: value, token: token)
                         store.connect()
                         dismiss()
                     }
@@ -36,7 +42,7 @@ struct ConnectorSettingsView: View {
                 }
 
                 Section("Security") {
-                    Text("AgentKeys sends semantic actions only. The companion never accepts arbitrary shell commands from the phone. Use Tailscale when connecting outside your local network.")
+                    Text("AgentKeys sends semantic actions only. The companion never accepts arbitrary shell commands from the phone. Prefer HTTPS. Use local HTTP only over loopback or a private Tailscale connection.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -49,6 +55,7 @@ struct ConnectorSettingsView: View {
                 }
             }
             .onAppear {
+                scheme = store.configuration.scheme
                 host = store.configuration.host
                 port = String(store.configuration.port)
                 token = store.configuration.token == ConnectorConfiguration.demo.token ? "" : store.configuration.token
@@ -56,4 +63,3 @@ struct ConnectorSettingsView: View {
         }
     }
 }
-

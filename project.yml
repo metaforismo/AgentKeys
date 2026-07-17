@@ -15,18 +15,20 @@ targets:
     platform: iOS
     sources:
       - path: AgentKeys
+    info:
+      path: AgentKeys/Info.plist
+      properties:
+        CFBundleDisplayName: AgentKeys
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: AgentKeys connects to the companion running on your Mac.
+        NSMicrophoneUsageDescription: AgentKeys uses the microphone only while you hold push-to-talk.
+        NSSpeechRecognitionUsageDescription: AgentKeys turns your voice into prompts on device.
+        UILaunchScreen: {}
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.agentkeys.app
         PRODUCT_NAME: AgentKeys
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: AgentKeys
-        INFOPLIST_KEY_NSLocalNetworkUsageDescription: AgentKeys connects to the companion running on your Mac.
-        INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking: YES
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: AgentKeys uses the microphone only while you hold push-to-talk.
-        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: AgentKeys turns your voice into prompts on device.
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1,2"
   AgentKeysTests:
@@ -39,6 +41,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.agentkeys.tests
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   AgentKeys:
     build:

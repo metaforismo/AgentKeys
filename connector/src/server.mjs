@@ -4,10 +4,19 @@ import { ConnectorState } from "./state.mjs";
 
 const MAX_BODY_BYTES = 16_384;
 
-export function createConnectorServer({ phoneToken, integrationToken, demo = false, logger = console }) {
+export function createConnectorServer({
+  phoneToken,
+  integrationToken,
+  demo = false,
+  logger = console,
+  rateLimit = { windowMs: 60_000, max: 180 },
+}) {
   if (!phoneToken || phoneToken.length < 12) throw new TypeError("phoneToken must be at least 12 characters");
   if (!integrationToken || integrationToken.length < 16) throw new TypeError("integrationToken must be at least 16 characters");
+  if (!Number.isInteger(rateLimit.max) || rateLimit.max < 1) throw new TypeError("rateLimit.max must be positive");
+  if (!Number.isInteger(rateLimit.windowMs) || rateLimit.windowMs < 1) throw new TypeError("rateLimit.windowMs must be positive");
   const state = new ConnectorState({ demo });
+  const requestWindows = new Map();
 
   const server = createServer(async (request, response) => {
     response.setHeader("Cache-Control", "no-store");
@@ -19,6 +28,8 @@ export function createConnectorServer({ phoneToken, integrationToken, demo = fal
       if (request.method === "GET" && url.pathname === "/health") {
         return send(response, 200, { ok: true });
       }
+
+      enforceRateLimit(request, response, requestWindows, rateLimit);
 
       if (request.method === "GET" && url.pathname === "/v1/snapshot") {
         requireBearer(request, phoneToken);
@@ -51,6 +62,21 @@ export function createConnectorServer({ phoneToken, integrationToken, demo = fal
   });
 
   return { server, state };
+}
+
+function enforceRateLimit(request, response, windows, { windowMs, max }) {
+  const key = request.socket.remoteAddress ?? "unknown";
+  const now = Date.now();
+  const existing = windows.get(key);
+  const entry = !existing || now - existing.startedAt >= windowMs
+    ? { startedAt: now, count: 0 }
+    : existing;
+  entry.count += 1;
+  windows.set(key, entry);
+  if (entry.count > max) {
+    response.setHeader("Retry-After", String(Math.max(1, Math.ceil((entry.startedAt + windowMs - now) / 1_000))));
+    throw httpError(429, "rate_limited");
+  }
 }
 
 function requireBearer(request, expected) {
@@ -95,4 +121,3 @@ function send(response, status, body) {
 function httpError(statusCode, message) {
   return Object.assign(new Error(message), { statusCode });
 }
-

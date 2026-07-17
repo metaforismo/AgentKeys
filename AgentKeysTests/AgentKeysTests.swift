@@ -6,8 +6,8 @@ import Testing
 struct AgentKeysTests {
     @Test("connector configuration builds a bounded URL")
     func configurationURL() {
-        let configuration = ConnectorConfiguration(host: "100.64.0.7", port: 7777, token: "secret")
-        #expect(configuration.baseURL?.absoluteString == "http://100.64.0.7:7777")
+        let configuration = ConnectorConfiguration(scheme: .https, host: "agentkeys.example.test", port: 7777, token: "secret")
+        #expect(configuration.baseURL?.absoluteString == "https://agentkeys.example.test:7777")
     }
 
     @Test("all wire statuses decode")
@@ -17,4 +17,3 @@ struct AgentKeysTests {
         #expect(statuses == AgentStatus.allCases)
     }
 }
-

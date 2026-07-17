@@ -27,6 +27,16 @@ enum AgentStatus: String, Codable, CaseIterable, Sendable {
         case .error: Color(red: 0.95, green: 0.29, blue: 0.35)
         }
     }
+
+    var assetName: String {
+        switch self {
+        case .idle: "StatusIdle"
+        case .thinking: "StatusThinking"
+        case .complete: "StatusComplete"
+        case .needsInput: "StatusNeedsInput"
+        case .error: "StatusError"
+        }
+    }
 }
 
 struct Agent: Identifiable, Codable, Equatable, Sendable {
@@ -57,4 +67,3 @@ struct ConnectorSnapshot: Codable, Sendable {
     let revision: Int
     let agents: [Agent]
 }
-

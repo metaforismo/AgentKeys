@@ -6,12 +6,14 @@ An open-source, tactile iPhone control surface for coding agents.
 
 AgentKeys turns the phone already on your desk into a compact agent console: see which tasks are idle, thinking, complete, waiting for input, or failing; select an agent; send a prompt; and issue explicit approve, reject, interrupt, and new-chat actions.
 
+<p align="center"><img src="assets/agentkeys-simulator.png" alt="AgentKeys running on an iPhone simulator with five distinct agent states and command keys" width="420"></p>
+
 > [!IMPORTANT]
 > AgentKeys is an independent community project. It is not affiliated with or endorsed by OpenAI, Anthropic, Work Louder, Herdr, or Tailscale. “Codex” and other product names belong to their respective owners.
 
 ## What works today
 
-- Native SwiftUI control deck for iPhone and iPad, with tactile animation and haptics.
+- Native SwiftUI control deck for iPhone and iPad, with tactile animation, haptics, and five transparent single-element status assets.
 - Live status polling through the local companion protocol.
 - Semantic action queue: `approve`, `reject`, `interrupt`, `new_chat`, and `prompt`.
 - Push-to-talk speech transcription using Apple Speech APIs.
@@ -30,7 +32,7 @@ Dictation currently uses Apple's native Speech framework: your iPhone acts as th
 Requirements: macOS, Xcode 26+, iOS 17+, Node.js 20+, and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```sh
-git clone https://github.com/YOUR-USER/AgentKeys.git
+git clone https://github.com/metaforismo/AgentKeys.git
 cd AgentKeys
 xcodegen generate
 open AgentKeys.xcodeproj
@@ -52,12 +54,12 @@ The default companion listens on loopback only. For an iPhone on Tailscale, bind
 node src/cli.mjs --host 100.x.y.z --allow-network
 ```
 
-Enter the host, port, and printed phone token in AgentKeys settings. Never expose port `7777` directly to the public internet.
+Enter the transport, host, port, and printed phone token in AgentKeys settings. Use **Local HTTP** only for loopback or a private Tailscale connection; select **HTTPS** when the companion is behind a TLS endpoint. Never expose port `7777` directly to the public internet.
 
 ## Architecture
 
 ```text
-┌──────────────────────┐      authenticated HTTP      ┌──────────────────────┐
+┌──────────────────────┐   authenticated HTTP(S)      ┌──────────────────────┐
 │ AgentKeys iOS        │ ────────────────────────────► │ Local Mac companion  │
 │ status + commands    │ ◄──────────────────────────── │ semantic queue only  │
 └──────────────────────┘                               └──────────┬───────────┘

@@ -21,9 +21,11 @@ struct AgentKey: View {
 
                 Spacer(minLength: 0)
 
-                Image(systemName: "terminal.fill")
-                    .font(.system(size: 23, weight: .semibold))
-                    .foregroundStyle(isSelected ? .white : .primary)
+                Image(agent.status.assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 42, height: 42)
+                    .accessibilityHidden(true)
 
                 Text(agent.name)
                     .font(.system(size: 13, weight: .bold, design: .rounded))
@@ -105,4 +107,3 @@ struct TactileButtonStyle: ButtonStyle {
             .animation(.spring(response: 0.18, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }
-

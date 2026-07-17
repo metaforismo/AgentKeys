@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 export const validStatuses = new Set(["idle", "thinking", "complete", "needs_input", "error"]);
 export const validActions = new Set(["approve", "reject", "interrupt", "new_chat", "prompt"]);
+const MAX_AGENTS = 64;
 
 export class ConnectorState {
   #agents = new Map();
@@ -23,6 +24,7 @@ export class ConnectorState {
     const id = assertUUID(input.id, "agent id");
     if (!validStatuses.has(input.status)) throw new TypeError("invalid agent status");
     const previous = this.#agents.get(id);
+    if (!previous && this.#agents.size >= MAX_AGENTS) throw new RangeError("agent limit reached");
     const agent = {
       id,
       name: boundedString(input.name, "name", 80),
