@@ -39,6 +39,7 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 - Interactive offline demo with tactile animation and haptics.
 - Dependency-free Node.js companion with separate phone and adapter credentials.
 - Adapter-facing endpoints for registering agents and retrieving queued actions.
+- Experimental Codex app-server adapter with verified lifecycle, approval, interrupt, model, effort, fast-tier, resume, and fork mappings.
 
 <p align="center">
   <a href="assets/agentkeys-controls.png"><img src="assets/agentkeys-controls.png" alt="AgentKeys Codex control sheet with model, permission, reasoning, speed, live web search, resume, and fork controls" width="360"></a>
@@ -46,7 +47,7 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 
 <p align="center"><sub>Advanced controls stay behind the rotary dial, keeping the main deck focused on agent state and frequent actions.</sub></p>
 
-The repository does **not** claim automatic Codex or Claude Code approval integration yet. An adapter must translate verified lifecycle events and preserve each coding harness's native permission model. Unknown or unadvertised actions are rejected instead of becoming guessed keystrokes or arbitrary shell commands. Claude Code permission bypass is intentionally not part of the protocol.
+The repository now includes an **experimental Codex app-server adapter**. It translates structured lifecycle events and exact pending approval request IDs; it never scrapes terminal text or synthesizes approvals. OpenAI marks app-server experimental, so compatibility is checked against explicit Codex versions and unsupported server requests fail closed. A production Claude Code adapter is not implemented yet, and Claude Code permission bypass is intentionally outside the protocol.
 
 ## How it works
 
@@ -107,6 +108,20 @@ node src/cli.mjs --host 100.x.y.z --allow-network
 
 Enter the transport, host, port, and printed phone token in AgentKeys settings. Use **Local HTTP** only for loopback or a private encrypted tunnel. Select **HTTPS** when the companion is behind a TLS endpoint. Never expose port `7777` directly to the public internet.
 
+## Connect Codex
+
+With the companion running, open a second terminal and reuse only its integration token:
+
+```sh
+cd connector
+export AGENTKEYS_INTEGRATION_TOKEN='the-same-integration-token'
+npm run start:codex -- --workspace /absolute/path/to/project
+```
+
+The adapter starts or resumes a real Codex thread, publishes only the controls supported by the active model catalog, and maps Codex lifecycle notifications to the five AgentKeys states. It creates new threads with `workspace-write` sandboxing and `on-request` approvals. Structured request types that the phone cannot represent are rejected and must be continued on the Mac.
+
+Because `codex app-server` is experimental, run `npm run smoke:codex` after upgrading Codex. The smoke test initializes the local server and reads its model catalog without starting a model turn. See the [Codex adapter guide](docs/codex-adapter.md) for options, supported actions, and compatibility limits.
+
 ## Voice input
 
 Dictation currently uses Apple's native Speech framework. The iPhone acts as the microphone, and partial transcription appears directly in the selected agent's prompt field without an AgentKeys speech backend.
@@ -123,7 +138,7 @@ Generated visual assets and their reproducible processing steps are documented i
 
 ## Project status
 
-AgentKeys is an early foundation release. The iOS control surface, capability protocol, local companion, provider-aware demo, voice input, and CI are functional. Production coding-agent adapters, secure pairing, durable history, and background notifications remain on the [roadmap](ROADMAP.md).
+AgentKeys is an early foundation release. The iOS control surface, capability protocol, local companion, provider-aware demo, voice input, experimental Codex adapter, and CI are functional. A production Claude Code adapter, stable app-server compatibility, secure pairing, durable history, and background notifications remain on the [roadmap](ROADMAP.md).
 
 ## Contributing
 

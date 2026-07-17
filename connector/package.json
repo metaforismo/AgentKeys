@@ -4,10 +4,13 @@
   "description": "Local, semantic-action connector for the AgentKeys iOS app",
   "type": "module",
   "bin": {
-    "agentkeys": "src/cli.mjs"
+    "agentkeys": "src/cli.mjs",
+    "agentkeys-codex": "src/codex-adapter-cli.mjs"
   },
   "scripts": {
     "start": "node src/cli.mjs",
+    "start:codex": "node src/codex-adapter-cli.mjs",
+    "smoke:codex": "node scripts/smoke-codex-app-server.mjs",
     "test": "node --test"
   },
   "engines": {

@@ -17,7 +17,7 @@
 - [x] Provider and capability negotiation contract
 - [x] Safe semantic mode, model, effort, speed, search, session, workflow, and branch actions
 - [x] Provider-aware Codex and Claude Code demo controls
-- [ ] Codex adapter using documented, verified lifecycle surfaces
+- [x] Experimental Codex app-server adapter using structured, version-tested lifecycle surfaces
 - [ ] Codex branch/worktree and fast-mode compatibility tests
 - [ ] Claude Code adapter using documented hooks, agent view, and permission surfaces
 - [ ] Claude Code worktree, effort, resume, and permission-mode compatibility tests
