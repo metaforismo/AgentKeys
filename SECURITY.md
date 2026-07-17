@@ -14,6 +14,8 @@ Approval is harness-specific. An adapter must preserve the harness's native perm
 
 Claude Code's permission-bypass mode is deliberately excluded. Provider adapters may narrow the published capability profile, but cannot expand the connector's built-in enum vocabulary or turn a semantic value into executable text.
 
+The Claude adapter keeps at most one `canUseTool` request pending. Approval returns the original, SDK-provided tool input for that request only; rejection returns a scoped denial. Concurrent permission requests, aborted requests, and structured questions the phone cannot represent are denied. Closing or interrupting the adapter also denies the pending request.
+
 ## Known pre-1.0 limitations
 
 - Phone tokens are entered manually and are not yet stored in Keychain.

@@ -19,10 +19,11 @@
 - [x] Provider-aware Codex and Claude Code demo controls
 - [x] Experimental Codex app-server adapter using structured, version-tested lifecycle surfaces
 - [ ] Codex branch/worktree and fast-mode compatibility tests
-- [ ] Claude Code adapter using documented hooks, agent view, and permission surfaces
-- [ ] Claude Code worktree, effort, resume, and permission-mode compatibility tests
+- [x] Claude Code adapter using the official persistent Agent SDK and `canUseTool` permission surface
+- [x] Claude Code effort, fast mode, resume/fork, and permission-mode contract tests
+- [ ] Claude Code worktree and structured question compatibility tests
 - [ ] OpenMicro interoperability experiment
-- [ ] Adapter contract tests and compatibility matrix
+- [x] Adapter contract tests and compatibility matrix
 
 ## 0.3 — durable daily use
 

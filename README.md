@@ -37,9 +37,10 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 - Provider-advertised model selection, Codex live-search control, and resume/fork session actions behind the rotary dial.
 - Push-to-talk transcription using Apple's Speech framework.
 - Interactive offline demo with tactile animation and haptics.
-- Dependency-free Node.js companion with separate phone and adapter credentials.
+- Small Node.js companion with separate phone and adapter credentials; the Claude adapter uses Anthropic's official Agent SDK.
 - Adapter-facing endpoints for registering agents and retrieving queued actions.
 - Experimental Codex app-server adapter with verified lifecycle, approval, interrupt, model, effort, fast-tier, resume, and fork mappings.
+- Experimental Claude Agent SDK adapter with persistent prompts, exact tool approvals, interrupt, model, effort, fast mode, permission modes, resume, and fork.
 
 <p align="center">
   <a href="assets/agentkeys-controls.png"><img src="assets/agentkeys-controls.png" alt="AgentKeys Codex control sheet with model, permission, reasoning, speed, live web search, resume, and fork controls" width="360"></a>
@@ -47,7 +48,7 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 
 <p align="center"><sub>Advanced controls stay behind the rotary dial, keeping the main deck focused on agent state and frequent actions.</sub></p>
 
-The repository now includes an **experimental Codex app-server adapter**. It translates structured lifecycle events and exact pending approval request IDs; it never scrapes terminal text or synthesizes approvals. OpenAI marks app-server experimental, so compatibility is checked against explicit Codex versions and unsupported server requests fail closed. A production Claude Code adapter is not implemented yet, and Claude Code permission bypass is intentionally outside the protocol.
+The repository includes real, experimental adapters for **Codex app-server** and the **Claude Agent SDK**. Both translate structured lifecycle events and exact pending approvals; neither scrapes terminal text, injects keystrokes, or synthesizes approval state. Unsupported requests fail closed, and Claude Code permission bypass is intentionally outside the protocol.
 
 ## How it works
 
@@ -65,7 +66,7 @@ The repository now includes an **experimental Codex app-server adapter**. It tra
 
 The iOS app never submits shell text for execution. It sends a typed action vocabulary to the companion. A local adapter decides which actions its coding harness supports and how they map to that harness.
 
-Each agent advertises a capability profile. Codex sessions can expose plan mode, supported models and reasoning levels, fast mode, live search, resume/fork, and isolated branch workflows. Claude Code sessions can expose its safe permission modes, model aliases, model-supported effort levels, continue/fork, worktrees, and agent workflows. The UI changes per agent instead of assuming the two harnesses are identical.
+Each agent advertises a capability profile. The current Codex adapter exposes supported models and reasoning levels, fast mode, resume, and fork. The current Claude adapter exposes its safe permission modes, live model catalog, model-supported effort levels and fast mode, resume/fork, and agent workflows. Branches, worktrees, and search stay hidden until an adapter can execute and verify them. The UI changes per agent instead of assuming the two harnesses are identical.
 
 The control vocabulary follows current first-party surfaces: [Codex Micro](https://openai.com/supply/co-lab/work-louder/) pairs agent state keys with workflow shortcuts and live reasoning control; the [Codex CLI reference](https://developers.openai.com/codex/cli/reference/) documents model, search, resume, and fork controls; and the [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference) documents worktrees, agent monitoring, effort, model, continue/resume, fork, and permission-mode controls. AgentKeys adopts the useful interaction ideas without claiming undocumented integration.
 
@@ -90,10 +91,11 @@ Build and run the `AgentKeys` scheme. The first-run introduction offers an insta
 
 ## Run the Mac companion
 
-The reference companion requires Node.js 20 or newer and has no runtime dependencies.
+The reference companion requires Node.js 20 or newer. Install the locked dependency set before running it:
 
 ```sh
 cd connector
+npm ci
 npm test
 AGENTKEYS_PHONE_TOKEN='replace-with-a-long-random-token' \
 AGENTKEYS_INTEGRATION_TOKEN='replace-with-a-different-long-random-token' \
@@ -122,6 +124,20 @@ The adapter starts or resumes a real Codex thread, publishes only the controls s
 
 Because `codex app-server` is experimental, run `npm run smoke:codex` after upgrading Codex. The smoke test initializes the local server and reads its model catalog without starting a model turn. See the [Codex adapter guide](docs/codex-adapter.md) for options, supported actions, and compatibility limits.
 
+## Connect Claude Code
+
+With the companion running, open a second terminal and reuse only its integration token:
+
+```sh
+cd connector
+export AGENTKEYS_INTEGRATION_TOKEN='the-same-integration-token'
+npm run start:claude -- --workspace /absolute/path/to/project
+```
+
+The adapter uses Anthropic's official persistent Agent SDK query rather than terminal text. Claude's own `canUseTool` callback pauses the exact tool request until **Approve** or **Reject** resolves it. `bypassPermissions` is never advertised or selected. Structured `AskUserQuestion` prompts currently stop with a clear “continue on the Mac” error because the phone protocol cannot faithfully return multiple structured answers yet.
+
+Run `npm run smoke:claude` after upgrading the SDK or Claude Code. It initializes the SDK and reads the live model catalog without sending a prompt. See the [Claude adapter guide](docs/claude-adapter.md) for permission modes, options, compatibility evidence, and usage notes.
+
 ## Voice input
 
 Dictation currently uses Apple's native Speech framework. The iPhone acts as the microphone, and partial transcription appears directly in the selected agent's prompt field without an AgentKeys speech backend.
@@ -138,7 +154,7 @@ Generated visual assets and their reproducible processing steps are documented i
 
 ## Project status
 
-AgentKeys is an early foundation release. The iOS control surface, capability protocol, local companion, provider-aware demo, voice input, experimental Codex adapter, and CI are functional. A production Claude Code adapter, stable app-server compatibility, secure pairing, durable history, and background notifications remain on the [roadmap](ROADMAP.md).
+AgentKeys is an early foundation release. The iOS control surface, capability protocol, local companion, provider-aware demo, voice input, experimental Codex and Claude adapters, and CI are functional. Stable adapter compatibility, secure pairing, durable history, and background notifications remain on the [roadmap](ROADMAP.md).
 
 ## Contributing
 

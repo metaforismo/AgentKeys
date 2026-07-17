@@ -76,7 +76,7 @@ Creates or updates an agent session.
 
 `provider` is `codex`, `claude_code`, or `generic`. Older adapters may omit the new control fields; the iOS client infers a conservative profile from `harness`, and older capability objects decode new booleans as `false`. New adapters should publish explicit capabilities and current values so the deck never offers unsupported controls. Model identifiers are bounded opaque values, not command fragments.
 
-Claude Code adapters must not advertise or translate `bypassPermissions`. AgentKeys' built-in Claude profile is limited to `manual`, `accept_edits`, `plan`, and `auto`. An adapter must preserve the harness's own policy and may reject any queued action that is invalid in the current session.
+Claude Code adapters must not advertise or translate `bypassPermissions`. AgentKeys' Claude profile is limited to `manual`, `accept_edits`, `plan`, and `auto`; these map to SDK `default`, `acceptEdits`, `plan`, and `auto`. An adapter must preserve the harness's own policy and may reject any queued action that is invalid in the current session. An approval resolves only the one `canUseTool` request currently paused by Claude.
 
 ### `GET /v1/integrations/actions?agentID=<uuid>`
 
