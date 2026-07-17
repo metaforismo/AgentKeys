@@ -131,8 +131,51 @@ struct AgentCapabilities: Codable, Equatable, Sendable {
     var modes: [AgentMode]
     var efforts: [AgentEffort]
     var speeds: [AgentSpeed]
+    var models: [String]
     var workflows: [AgentWorkflow]
     var supportsBranch: Bool
+    var supportsResume: Bool
+    var supportsFork: Bool
+    var supportsWebSearch: Bool
+
+    init(
+        modes: [AgentMode],
+        efforts: [AgentEffort],
+        speeds: [AgentSpeed],
+        models: [String] = [],
+        workflows: [AgentWorkflow],
+        supportsBranch: Bool,
+        supportsResume: Bool = false,
+        supportsFork: Bool = false,
+        supportsWebSearch: Bool = false
+    ) {
+        self.modes = modes
+        self.efforts = efforts
+        self.speeds = speeds
+        self.models = models
+        self.workflows = workflows
+        self.supportsBranch = supportsBranch
+        self.supportsResume = supportsResume
+        self.supportsFork = supportsFork
+        self.supportsWebSearch = supportsWebSearch
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case modes, efforts, speeds, models, workflows, supportsBranch, supportsResume, supportsFork, supportsWebSearch
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        modes = try container.decode([AgentMode].self, forKey: .modes)
+        efforts = try container.decode([AgentEffort].self, forKey: .efforts)
+        speeds = try container.decode([AgentSpeed].self, forKey: .speeds)
+        models = try container.decodeIfPresent([String].self, forKey: .models) ?? []
+        workflows = try container.decode([AgentWorkflow].self, forKey: .workflows)
+        supportsBranch = try container.decode(Bool.self, forKey: .supportsBranch)
+        supportsResume = try container.decodeIfPresent(Bool.self, forKey: .supportsResume) ?? false
+        supportsFork = try container.decodeIfPresent(Bool.self, forKey: .supportsFork) ?? false
+        supportsWebSearch = try container.decodeIfPresent(Bool.self, forKey: .supportsWebSearch) ?? false
+    }
 
     static func defaults(for provider: AgentProvider) -> Self {
         switch provider {
@@ -141,16 +184,23 @@ struct AgentCapabilities: Codable, Equatable, Sendable {
                 modes: [.manual, .plan],
                 efforts: [.low, .medium, .high, .xhigh],
                 speeds: [.standard, .fast],
+                models: ["gpt-5.4", "gpt-5.4-mini"],
                 workflows: AgentWorkflow.allCases,
-                supportsBranch: true
+                supportsBranch: true,
+                supportsResume: true,
+                supportsFork: true,
+                supportsWebSearch: true
             )
         case .claudeCode:
             Self(
                 modes: [.manual, .acceptEdits, .plan, .auto],
                 efforts: [.low, .medium, .high, .xhigh, .max],
                 speeds: [.standard],
+                models: ["sonnet", "opus", "haiku"],
                 workflows: AgentWorkflow.allCases,
-                supportsBranch: true
+                supportsBranch: true,
+                supportsResume: true,
+                supportsFork: true
             )
         case .generic:
             Self(modes: [.manual], efforts: [.medium], speeds: [.standard], workflows: [], supportsBranch: false)
@@ -169,6 +219,8 @@ struct Agent: Identifiable, Codable, Equatable, Sendable {
     var mode: AgentMode
     var effort: AgentEffort
     var speed: AgentSpeed
+    var model: String
+    var webSearchEnabled: Bool
     var branch: String?
     var capabilities: AgentCapabilities
 
@@ -183,10 +235,13 @@ struct Agent: Identifiable, Codable, Equatable, Sendable {
         mode: AgentMode = .manual,
         effort: AgentEffort = .medium,
         speed: AgentSpeed = .standard,
+        model: String? = nil,
+        webSearchEnabled: Bool = false,
         branch: String? = nil,
         capabilities: AgentCapabilities? = nil
     ) {
         let resolvedProvider = provider ?? Self.inferProvider(from: harness)
+        let resolvedCapabilities = capabilities ?? .defaults(for: resolvedProvider)
         self.id = id
         self.name = name
         self.harness = harness
@@ -197,12 +252,14 @@ struct Agent: Identifiable, Codable, Equatable, Sendable {
         self.mode = mode
         self.effort = effort
         self.speed = speed
+        self.model = model ?? resolvedCapabilities.models.first ?? "default"
+        self.webSearchEnabled = webSearchEnabled
         self.branch = branch
-        self.capabilities = capabilities ?? .defaults(for: resolvedProvider)
+        self.capabilities = resolvedCapabilities
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, harness, task, status, updatedAt, provider, mode, effort, speed, branch, capabilities
+        case id, name, harness, task, status, updatedAt, provider, mode, effort, speed, model, webSearchEnabled, branch, capabilities
     }
 
     init(from decoder: Decoder) throws {
@@ -217,8 +274,10 @@ struct Agent: Identifiable, Codable, Equatable, Sendable {
         mode = try container.decodeIfPresent(AgentMode.self, forKey: .mode) ?? .manual
         effort = try container.decodeIfPresent(AgentEffort.self, forKey: .effort) ?? .medium
         speed = try container.decodeIfPresent(AgentSpeed.self, forKey: .speed) ?? .standard
-        branch = try container.decodeIfPresent(String.self, forKey: .branch)
         capabilities = try container.decodeIfPresent(AgentCapabilities.self, forKey: .capabilities) ?? .defaults(for: provider)
+        model = try container.decodeIfPresent(String.self, forKey: .model) ?? capabilities.models.first ?? "default"
+        webSearchEnabled = try container.decodeIfPresent(Bool.self, forKey: .webSearchEnabled) ?? false
+        branch = try container.decodeIfPresent(String.self, forKey: .branch)
     }
 
     private static func inferProvider(from harness: String) -> AgentProvider {
@@ -237,6 +296,10 @@ enum AgentAction: String, Codable, CaseIterable, Sendable {
     case setMode = "set_mode"
     case setEffort = "set_effort"
     case setSpeed = "set_speed"
+    case setModel = "set_model"
+    case setWebSearch = "set_web_search"
+    case resumeSession = "resume_session"
+    case forkSession = "fork_session"
     case createBranch = "create_branch"
     case workflow
 }

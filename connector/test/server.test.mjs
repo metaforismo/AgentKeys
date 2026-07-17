@@ -22,8 +22,12 @@ test("protects snapshots and queues semantic actions", async (t) => {
   assert.equal(snapshot.agents.length, 5);
   assert.equal(snapshot.agents[0].provider, "codex");
   assert.deepEqual(snapshot.agents[0].capabilities.speeds, ["standard", "fast"]);
+  assert.deepEqual(snapshot.agents[0].capabilities.models, ["gpt-5.4", "gpt-5.4-mini"]);
+  assert.equal(snapshot.agents[0].model, "gpt-5.4");
+  assert.equal(snapshot.agents[0].webSearchEnabled, true);
   assert.equal(snapshot.agents[2].provider, "claude_code");
   assert.deepEqual(snapshot.agents[2].capabilities.modes, ["manual", "accept_edits", "plan", "auto"]);
+  assert.deepEqual(snapshot.agents[2].capabilities.models, ["sonnet", "opus", "haiku"]);
 
   const agentID = snapshot.agents[0].id;
   const requestID = "0d9c2b37-3e69-44a8-94de-ac196177e6a6";
@@ -41,10 +45,26 @@ test("protects snapshots and queues semantic actions", async (t) => {
   });
   assert.equal(modeResponse.status, 202);
 
+  for (const [requestID, action, text] of [
+    ["cb25a1f4-820c-4ac0-b487-203883db258c", "set_model", "gpt-5.4-mini"],
+    ["e363dc4b-5299-441a-b4c3-e706c7491947", "set_web_search", "false"],
+    ["9a80321d-9de7-439f-ac7e-420078d00172", "resume_session", null],
+    ["72a6ff4d-1096-416b-ab51-7e157bfaa7c6", "fork_session", null],
+  ]) {
+    const response = await fetch(`${base}/v1/actions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${phoneToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ agentID, requestID, action, text }),
+    });
+    assert.equal(response.status, 202);
+  }
+
   const actionsResponse = await fetch(`${base}/v1/integrations/actions?agentID=${agentID}`, {
     headers: { "x-agentkeys-integration-token": integrationToken },
   });
-  assert.deepEqual((await actionsResponse.json()).actions.map((action) => action.action), ["approve", "set_mode"]);
+  assert.deepEqual((await actionsResponse.json()).actions.map((action) => action.action), [
+    "approve", "set_mode", "set_model", "set_web_search", "resume_session", "fork_session",
+  ]);
 });
 
 test("rejects arbitrary actions and oversized prompt bodies", async (t) => {
@@ -78,6 +98,27 @@ test("rejects arbitrary actions and oversized prompt bodies", async (t) => {
     body: JSON.stringify({ agentID: "fc2e5070-041c-4ad2-a90e-959a34af3bbf", requestID: "4a0ac3ab-aef2-4301-aee3-b39ea4de8633", action: "set_mode", text: "bypassPermissions" }),
   });
   assert.equal(unsafeMode.status, 400);
+
+  const unsupportedModel = await fetch(`${base}/v1/actions`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ agentID: "73659c11-43ed-4aac-8f18-771b977c6901", requestID: "123a991b-d198-42de-8e38-537330a86cdd", action: "set_model", text: "unadvertised-model" }),
+  });
+  assert.equal(unsupportedModel.status, 400);
+
+  const unsupportedSearch = await fetch(`${base}/v1/actions`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ agentID: "fc2e5070-041c-4ad2-a90e-959a34af3bbf", requestID: "223a991b-d198-42de-8e38-537330a86cdd", action: "set_web_search", text: "true" }),
+  });
+  assert.equal(unsupportedSearch.status, 400);
+
+  const resumeWithText = await fetch(`${base}/v1/actions`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ agentID: "73659c11-43ed-4aac-8f18-771b977c6901", requestID: "323a991b-d198-42de-8e38-537330a86cdd", action: "resume_session", text: "run this" }),
+  });
+  assert.equal(resumeWithText.status, 400);
 });
 
 test("rate limits repeated non-health requests per client", async (t) => {

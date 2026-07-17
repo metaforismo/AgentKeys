@@ -208,7 +208,7 @@ struct ControlDeckView: View {
                         .lineLimit(1)
 
                     if let provider = store.selectedAgent?.provider {
-                        ProviderBadge(provider: provider)
+                        ProviderBadge(provider: provider, model: store.selectedAgent?.model)
                     }
                 }
 
@@ -677,11 +677,12 @@ private struct StatusPill: View {
 
 private struct ProviderBadge: View {
     let provider: AgentProvider
+    let model: String?
 
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: provider.systemImage)
-            Text(provider.shortLabel)
+            Text(badgeText)
         }
         .font(.system(size: 7, weight: .black, design: .rounded))
         .tracking(0.55)
@@ -689,6 +690,12 @@ private struct ProviderBadge: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
         .background(.black.opacity(0.045), in: Capsule())
+    }
+
+    private var badgeText: String {
+        guard let model, model != "default" else { return provider.shortLabel }
+        let compactModel = model.hasPrefix("gpt-") ? String(model.dropFirst(4)) : model.uppercased()
+        return "\(provider.shortLabel) · \(compactModel)"
     }
 }
 
@@ -822,9 +829,19 @@ private struct ProviderControlSheet: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(agent.provider.label)
                                     .font(.system(.headline, design: .rounded, weight: .bold))
-                                Text(agent.harness)
+                                Text("\(agent.harness) · \(agent.model)")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        if !agent.capabilities.models.isEmpty {
+                            controlGroup(title: "Model", detail: modelDetail) {
+                                ForEach(agent.capabilities.models, id: \.self) { model in
+                                    SelectorCapsule(title: model, selected: agent.model == model) {
+                                        Task { await store.perform(.setModel, text: model) }
+                                    }
+                                }
                             }
                         }
 
@@ -849,6 +866,54 @@ private struct ProviderControlSheet: View {
                                 ForEach(agent.capabilities.speeds, id: \.self) { speed in
                                     SelectorCapsule(title: speed.label, selected: agent.speed == speed) {
                                         Task { await store.perform(.setSpeed, text: speed.rawValue) }
+                                    }
+                                }
+                            }
+                        }
+
+                        if agent.capabilities.supportsWebSearch {
+                            HStack(spacing: 12) {
+                                Image(systemName: "globe.americas.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .frame(width: 38, height: 38)
+                                    .foregroundStyle(agent.webSearchEnabled ? .white : .primary)
+                                    .background(agent.webSearchEnabled ? Color.blue : Color.white, in: RoundedRectangle(cornerRadius: 11))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Live web search")
+                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                    Text("Codex can search current sources when the adapter supports it.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer(minLength: 8)
+
+                                Toggle("Live web search", isOn: Binding(
+                                    get: { agent.webSearchEnabled },
+                                    set: { value in Task { await store.perform(.setWebSearch, text: String(value)) } }
+                                ))
+                                .labelsHidden()
+                                .tint(.blue)
+                            }
+                            .padding(12)
+                            .background(.white.opacity(0.78), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+
+                        if agent.capabilities.supportsResume || agent.capabilities.supportsFork {
+                            controlGroup(title: "Session", detail: sessionDetail) {
+                                if agent.capabilities.supportsResume {
+                                    SessionActionButton(
+                                        title: agent.provider == .claudeCode ? "Continue recent" : "Resume recent",
+                                        systemImage: "clock.arrow.circlepath"
+                                    ) {
+                                        Task { await store.perform(.resumeSession) }
+                                    }
+                                }
+
+                                if agent.capabilities.supportsFork {
+                                    SessionActionButton(title: "Fork session", systemImage: "arrow.triangle.branch") {
+                                        Task { await store.perform(.forkSession) }
                                     }
                                 }
                             }
@@ -879,6 +944,18 @@ private struct ProviderControlSheet: View {
             : "Switch between direct work and a plan-first collaboration flow."
     }
 
+    private var modelDetail: String {
+        store.selectedAgent?.provider == .claudeCode
+            ? "Uses aliases advertised by Claude Code; the adapter resolves the active model."
+            : "Only models advertised by the connected Codex adapter appear here."
+    }
+
+    private var sessionDetail: String {
+        store.selectedAgent?.provider == .claudeCode
+            ? "Continue the latest project session or fork it without replacing the original."
+            : "Resume recent work or create an independent Codex session from the current context."
+    }
+
     private func controlGroup<Content: View>(
         title: String,
         detail: String,
@@ -892,6 +969,25 @@ private struct ProviderControlSheet: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+private struct SessionActionButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.system(.caption, design: .rounded, weight: .bold))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(.white, in: Capsule())
+                .overlay { Capsule().stroke(.black.opacity(0.10), lineWidth: 1) }
+        }
+        .buttonStyle(.plain)
     }
 }
 

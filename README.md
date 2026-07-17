@@ -19,7 +19,7 @@
 
 <p align="center"><sub>First-run onboarding and the actual control deck, captured from the AgentKeys build on an iPhone 17 Pro simulator.</sub></p>
 
-AgentKeys turns the phone already on your desk into a compact console for agent work. See which tasks are active, waiting, complete, or failing; select an agent; dictate or type a prompt; and operate a provider-aware control deck for approvals, workflows, modes, effort, speed, and isolated branches.
+AgentKeys turns the phone already on your desk into a compact console for agent work. See which tasks are active, waiting, complete, or failing; select an agent; dictate or type a prompt; and operate a provider-aware control deck for approvals, workflows, modes, models, effort, speed, sessions, search, and isolated branches.
 
 > [!IMPORTANT]
 > AgentKeys is an independent community project. It is not affiliated with or endorsed by OpenAI, Anthropic, Work Louder, or Tailscale. Product names belong to their respective owners.
@@ -34,10 +34,17 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 - Capability-driven Codex and Claude Code profiles with provider-specific modes.
 - Tactile workflow pad for PR review, debugging, refactoring, and focused tests.
 - Reasoning-effort dial, Codex fast/standard control, and safe branch/worktree requests.
+- Provider-advertised model selection, Codex live-search control, and resume/fork session actions behind the rotary dial.
 - Push-to-talk transcription using Apple's Speech framework.
 - Interactive offline demo with tactile animation and haptics.
 - Dependency-free Node.js companion with separate phone and adapter credentials.
 - Adapter-facing endpoints for registering agents and retrieving queued actions.
+
+<p align="center">
+  <a href="assets/agentkeys-controls.png"><img src="assets/agentkeys-controls.png" alt="AgentKeys Codex control sheet with model, permission, reasoning, speed, live web search, resume, and fork controls" width="360"></a>
+</p>
+
+<p align="center"><sub>Advanced controls stay behind the rotary dial, keeping the main deck focused on agent state and frequent actions.</sub></p>
 
 The repository does **not** claim automatic Codex or Claude Code approval integration yet. An adapter must translate verified lifecycle events and preserve each coding harness's native permission model. Unknown or unadvertised actions are rejected instead of becoming guessed keystrokes or arbitrary shell commands. Claude Code permission bypass is intentionally not part of the protocol.
 
@@ -57,9 +64,9 @@ The repository does **not** claim automatic Codex or Claude Code approval integr
 
 The iOS app never submits shell text for execution. It sends a typed action vocabulary to the companion. A local adapter decides which actions its coding harness supports and how they map to that harness.
 
-Each agent advertises a capability profile. Codex sessions can expose plan mode, supported reasoning levels, fast mode, and isolated branch workflows. Claude Code sessions can expose its safe permission modes, model-supported effort levels, worktrees, and agent workflows. The UI changes per agent instead of assuming the two harnesses are identical.
+Each agent advertises a capability profile. Codex sessions can expose plan mode, supported models and reasoning levels, fast mode, live search, resume/fork, and isolated branch workflows. Claude Code sessions can expose its safe permission modes, model aliases, model-supported effort levels, continue/fork, worktrees, and agent workflows. The UI changes per agent instead of assuming the two harnesses are identical.
 
-The control vocabulary follows current first-party surfaces: [Codex Micro](https://openai.com/supply/co-lab/work-louder/) pairs agent state keys with workflow shortcuts and live reasoning control, while the [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference) documents worktrees, agent monitoring, effort, model, resume, and permission-mode controls. AgentKeys adopts the useful interaction ideas without claiming undocumented integration.
+The control vocabulary follows current first-party surfaces: [Codex Micro](https://openai.com/supply/co-lab/work-louder/) pairs agent state keys with workflow shortcuts and live reasoning control; the [Codex CLI reference](https://developers.openai.com/codex/cli/reference/) documents model, search, resume, and fork controls; and the [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference) documents worktrees, agent monitoring, effort, model, continue/resume, fork, and permission-mode controls. AgentKeys adopts the useful interaction ideas without claiming undocumented integration.
 
 Read the [protocol](docs/protocol.md) and [security model](SECURITY.md) before building an adapter.
 

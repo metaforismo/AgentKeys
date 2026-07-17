@@ -15,7 +15,7 @@
 ## 0.2 — real adapters
 
 - [x] Provider and capability negotiation contract
-- [x] Safe semantic modes, effort, speed, workflow, and branch actions
+- [x] Safe semantic mode, model, effort, speed, search, session, workflow, and branch actions
 - [x] Provider-aware Codex and Claude Code demo controls
 - [ ] Codex adapter using documented, verified lifecycle surfaces
 - [ ] Codex branch/worktree and fast-mode compatibility tests

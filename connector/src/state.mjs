@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 export const validStatuses = new Set(["idle", "thinking", "complete", "needs_input", "error"]);
 export const validActions = new Set([
   "approve", "reject", "interrupt", "new_chat", "prompt",
-  "set_mode", "set_effort", "set_speed", "create_branch", "workflow",
+  "set_mode", "set_effort", "set_speed", "set_model", "set_web_search",
+  "resume_session", "fork_session", "create_branch", "workflow",
 ]);
 const validProviders = new Set(["codex", "claude_code", "generic"]);
 const validModes = new Set(["manual", "plan", "accept_edits", "auto"]);
@@ -17,17 +18,28 @@ const defaultCapabilities = {
     modes: ["manual", "plan"],
     efforts: ["low", "medium", "high", "xhigh"],
     speeds: ["standard", "fast"],
+    models: ["gpt-5.4", "gpt-5.4-mini"],
     workflows: ["review_pr", "debug", "refactor", "tests"],
     supportsBranch: true,
+    supportsResume: true,
+    supportsFork: true,
+    supportsWebSearch: true,
   },
   claude_code: {
     modes: ["manual", "accept_edits", "plan", "auto"],
     efforts: ["low", "medium", "high", "xhigh", "max"],
     speeds: ["standard"],
+    models: ["sonnet", "opus", "haiku"],
     workflows: ["review_pr", "debug", "refactor", "tests"],
     supportsBranch: true,
+    supportsResume: true,
+    supportsFork: true,
+    supportsWebSearch: false,
   },
-  generic: { modes: ["manual"], efforts: ["medium"], speeds: ["standard"], workflows: [], supportsBranch: false },
+  generic: {
+    modes: ["manual"], efforts: ["medium"], speeds: ["standard"], models: [], workflows: [],
+    supportsBranch: false, supportsResume: false, supportsFork: false, supportsWebSearch: false,
+  },
 };
 
 export class ConnectorState {
@@ -58,9 +70,16 @@ export class ConnectorState {
     const mode = input.mode ?? "manual";
     const effort = input.effort ?? "medium";
     const speed = input.speed ?? "standard";
+    const model = validModel(input.model ?? capabilities.models[0] ?? "default");
+    if (input.webSearchEnabled != null && typeof input.webSearchEnabled !== "boolean") {
+      throw new TypeError("webSearchEnabled must be a boolean");
+    }
+    const webSearchEnabled = input.webSearchEnabled === true;
     if (!capabilities.modes.includes(mode)) throw new TypeError("mode is not supported by agent capabilities");
     if (!capabilities.efforts.includes(effort)) throw new TypeError("effort is not supported by agent capabilities");
     if (!capabilities.speeds.includes(speed)) throw new TypeError("speed is not supported by agent capabilities");
+    if (capabilities.models.length > 0 && !capabilities.models.includes(model)) throw new TypeError("model is not supported by agent capabilities");
+    if (webSearchEnabled && !capabilities.supportsWebSearch) throw new TypeError("web search is not supported by agent capabilities");
     const branch = input.branch == null ? null : validBranch(input.branch);
     if (branch && !capabilities.supportsBranch) throw new TypeError("branch is not supported by agent capabilities");
     const agent = {
@@ -73,6 +92,8 @@ export class ConnectorState {
       mode,
       effort,
       speed,
+      model,
+      webSearchEnabled,
       branch,
       capabilities,
       updatedAt: new Date().toISOString(),
@@ -114,9 +135,9 @@ export class ConnectorState {
 
   #seedDemo() {
     const entries = [
-      ["73659c11-43ed-4aac-8f18-771b977c6901", "Codex", "Codex CLI", "Implement connector protocol", "thinking", { effort: "high", speed: "fast", branch: "feat/control-deck" }],
+      ["73659c11-43ed-4aac-8f18-771b977c6901", "Codex", "Codex CLI", "Implement connector protocol", "thinking", { effort: "high", speed: "fast", model: "gpt-5.4", webSearchEnabled: true, branch: "feat/control-deck" }],
       ["8fb44c64-d268-4728-bdc8-89c0ac9caad2", "Review", "Codex", "Review security boundary", "needs_input", { mode: "plan", effort: "xhigh", branch: "review/security" }],
-      ["fc2e5070-041c-4ad2-a90e-959a34af3bbf", "Design", "Claude Code", "Polish tactile controls", "complete", { mode: "accept_edits", effort: "high", branch: "design/hardware-ui" }],
+      ["fc2e5070-041c-4ad2-a90e-959a34af3bbf", "Design", "Claude Code", "Polish tactile controls", "complete", { mode: "accept_edits", effort: "high", model: "sonnet", branch: "design/hardware-ui" }],
       ["c8c71a25-245b-4eab-92a3-a03c39a9fa08", "Docs", "Generic", "Waiting for work", "idle", {}],
       ["25d4ee53-91e4-4b40-91ee-b33fe5472a2a", "Tests", "Codex", "Simulator smoke test", "error", { branch: "test/smoke" }],
     ];
@@ -156,9 +177,28 @@ function validateCapabilities(input) {
     modes: enumArray(input.modes, "modes", validModes),
     efforts: enumArray(input.efforts, "efforts", validEfforts),
     speeds: enumArray(input.speeds, "speeds", validSpeeds),
+    models: modelArray(input.models ?? []),
     workflows: enumArray(input.workflows, "workflows", validWorkflows, true),
     supportsBranch: input.supportsBranch === true,
+    supportsResume: input.supportsResume === true,
+    supportsFork: input.supportsFork === true,
+    supportsWebSearch: input.supportsWebSearch === true,
   };
+}
+
+function modelArray(value) {
+  if (!Array.isArray(value) || value.length > 12 || new Set(value).size !== value.length) {
+    throw new TypeError("invalid models");
+  }
+  return value.map((model) => {
+    return validModel(model);
+  });
+}
+
+function validModel(value) {
+  const model = boundedString(value, "model", 80);
+  if (!/^[A-Za-z0-9._:-]+$/.test(model)) throw new TypeError("invalid model");
+  return model;
 }
 
 function enumArray(value, field, allowed, allowEmpty = false) {
@@ -175,6 +215,19 @@ function validateSemanticAction(agent, action, text) {
   if (action === "set_mode" && !agent.capabilities.modes.includes(text)) throw new TypeError("unsupported mode");
   if (action === "set_effort" && !agent.capabilities.efforts.includes(text)) throw new TypeError("unsupported effort");
   if (action === "set_speed" && !agent.capabilities.speeds.includes(text)) throw new TypeError("unsupported speed");
+  if (action === "set_model" && !agent.capabilities.models.includes(text)) throw new TypeError("unsupported model");
+  if (action === "set_web_search") {
+    if (!agent.capabilities.supportsWebSearch) throw new TypeError("web search is not supported");
+    if (text !== "true" && text !== "false") throw new TypeError("invalid web search value");
+  }
+  if (action === "resume_session") {
+    if (!agent.capabilities.supportsResume) throw new TypeError("resume is not supported");
+    if (text !== null) throw new TypeError("resume does not accept text");
+  }
+  if (action === "fork_session") {
+    if (!agent.capabilities.supportsFork) throw new TypeError("fork is not supported");
+    if (text !== null) throw new TypeError("fork does not accept text");
+  }
   if (action === "workflow" && !agent.capabilities.workflows.includes(text)) throw new TypeError("unsupported workflow");
   if (action === "create_branch") {
     if (!agent.capabilities.supportsBranch) throw new TypeError("branch is not supported");

@@ -32,7 +32,11 @@ struct AgentKeysTests {
         #expect(agent.provider == .claudeCode)
         #expect(agent.capabilities.modes == [.manual, .acceptEdits, .plan, .auto])
         #expect(agent.capabilities.speeds == [.standard])
+        #expect(agent.capabilities.models == ["sonnet", "opus", "haiku"])
         #expect(agent.capabilities.supportsBranch)
+        #expect(agent.capabilities.supportsResume)
+        #expect(agent.capabilities.supportsFork)
+        #expect(agent.model == "sonnet")
     }
 
     @Test("provider profiles do not expose permission bypass")
@@ -41,5 +45,22 @@ struct AgentKeysTests {
         #expect(claude.modes == [.manual, .acceptEdits, .plan, .auto])
         #expect(claude.efforts.contains(.max))
         #expect(!claude.speeds.contains(.fast))
+        #expect(!claude.supportsWebSearch)
+        #expect(claude.models == ["sonnet", "opus", "haiku"])
+    }
+
+    @Test("older capability payloads decode conservatively")
+    func olderCapabilitiesDecode() throws {
+        let json = """
+        {
+          "modes":["manual"],"efforts":["medium"],"speeds":["standard"],
+          "workflows":[],"supportsBranch":false
+        }
+        """
+        let capabilities = try JSONDecoder().decode(AgentCapabilities.self, from: Data(json.utf8))
+        #expect(capabilities.models.isEmpty)
+        #expect(!capabilities.supportsResume)
+        #expect(!capabilities.supportsFork)
+        #expect(!capabilities.supportsWebSearch)
     }
 }

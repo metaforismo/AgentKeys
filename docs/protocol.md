@@ -38,7 +38,7 @@ Queues one semantic action. `requestID` makes retries idempotent.
 
 Core actions are `approve`, `reject`, `interrupt`, `new_chat`, and `prompt`. No `shell`, `keys`, or arbitrary executable action exists.
 
-Provider-aware semantic controls add `set_mode`, `set_effort`, `set_speed`, `create_branch`, and `workflow`. These actions require a bounded `text` value advertised by the target agent's capabilities. `create_branch` accepts only a validated branch name; it never accepts a command line.
+Provider-aware semantic controls add `set_mode`, `set_effort`, `set_speed`, `set_model`, `set_web_search`, `resume_session`, `fork_session`, `create_branch`, and `workflow`. Selection actions require a bounded `text` value advertised by the target agent's capabilities. `set_web_search` accepts only `true` or `false`; resume and fork carry no free-form text. `create_branch` accepts only a validated branch name; it never accepts a command line.
 
 ## Harness adapter endpoints
 
@@ -57,18 +57,24 @@ Creates or updates an agent session.
   "mode": "plan",
   "effort": "high",
   "speed": "fast",
+  "model": "gpt-5.4",
+  "webSearchEnabled": true,
   "branch": "feat/focused-tests",
   "capabilities": {
     "modes": ["manual", "plan"],
     "efforts": ["low", "medium", "high", "xhigh"],
     "speeds": ["standard", "fast"],
+    "models": ["gpt-5.4", "gpt-5.4-mini"],
     "workflows": ["review_pr", "debug", "refactor", "tests"],
-    "supportsBranch": true
+    "supportsBranch": true,
+    "supportsResume": true,
+    "supportsFork": true,
+    "supportsWebSearch": true
   }
 }
 ```
 
-`provider` is `codex`, `claude_code`, or `generic`. Older adapters may omit the new control fields; the iOS client infers a conservative profile from `harness`. New adapters should publish explicit capabilities and current values so the deck never offers unsupported controls.
+`provider` is `codex`, `claude_code`, or `generic`. Older adapters may omit the new control fields; the iOS client infers a conservative profile from `harness`, and older capability objects decode new booleans as `false`. New adapters should publish explicit capabilities and current values so the deck never offers unsupported controls. Model identifiers are bounded opaque values, not command fragments.
 
 Claude Code adapters must not advertise or translate `bypassPermissions`. AgentKeys' built-in Claude profile is limited to `manual`, `accept_edits`, `plan`, and `auto`. An adapter must preserve the harness's own policy and may reject any queued action that is invalid in the current session.
 
