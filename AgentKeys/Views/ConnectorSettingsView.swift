@@ -1,0 +1,59 @@
+import SwiftUI
+
+struct ConnectorSettingsView: View {
+    @Bindable var store: AgentStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var host = ""
+    @State private var port = "7777"
+    @State private var token = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Mac companion") {
+                    TextField("Tailscale IP or hostname", text: $host)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    TextField("Port", text: $port)
+                        .keyboardType(.numberPad)
+                    SecureField("Pairing token", text: $token)
+                        .textInputAutocapitalization(.never)
+                }
+
+                Section {
+                    Button("Connect") {
+                        guard let value = Int(port), (1...65535).contains(value) else { return }
+                        store.configuration = ConnectorConfiguration(host: host, port: value, token: token)
+                        store.connect()
+                        dismiss()
+                    }
+                    .disabled(host.isEmpty || token.isEmpty || Int(port) == nil)
+
+                    Button("Use interactive demo") {
+                        store.useDemo()
+                        dismiss()
+                    }
+                }
+
+                Section("Security") {
+                    Text("AgentKeys sends semantic actions only. The companion never accepts arbitrary shell commands from the phone. Use Tailscale when connecting outside your local network.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Connector")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .onAppear {
+                host = store.configuration.host
+                port = String(store.configuration.port)
+                token = store.configuration.token == ConnectorConfiguration.demo.token ? "" : store.configuration.token
+            }
+        }
+    }
+}
+

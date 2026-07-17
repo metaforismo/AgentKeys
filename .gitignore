@@ -1,0 +1,11 @@
+.DS_Store
+DerivedData/
+.build/
+build/
+AgentKeys.xcodeproj/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+node_modules/
+.env
+*.log

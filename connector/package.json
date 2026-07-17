@@ -1,0 +1,17 @@
+{
+  "name": "@agentkeys/connector",
+  "version": "0.1.0",
+  "description": "Local, semantic-action connector for the AgentKeys iOS app",
+  "type": "module",
+  "bin": {
+    "agentkeys": "src/cli.mjs"
+  },
+  "scripts": {
+    "start": "node src/cli.mjs",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
