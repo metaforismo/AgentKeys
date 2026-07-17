@@ -4,7 +4,7 @@ struct AgentKey: View {
     let agent: Agent
     let isSelected: Bool
     let action: () -> Void
-    @ScaledMetric(relativeTo: .caption) private var keyHeight = 114
+    @ScaledMetric(relativeTo: .caption) private var keyHeight = 102
 
     var body: some View {
         Button(action: action) {
@@ -13,7 +13,7 @@ struct AgentKey: View {
                 keyCap
             }
             .frame(maxWidth: .infinity, minHeight: keyHeight)
-            .contentShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
         .buttonStyle(TactileButtonStyle())
         .accessibilityLabel("\(agent.name), \(agent.status.label), \(agent.task)")
@@ -21,14 +21,14 @@ struct AgentKey: View {
     }
 
     private var keyBase: some View {
-        RoundedRectangle(cornerRadius: 21, style: .continuous)
-            .fill(Color(red: 0.54, green: 0.58, blue: 0.64).opacity(0.43))
-            .offset(y: 5)
-            .shadow(color: agent.status.color.opacity(isSelected ? 0.46 : 0.12), radius: isSelected ? 12 : 5, y: 6)
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(Color(red: 0.64, green: 0.67, blue: 0.71).opacity(0.42))
+            .offset(y: 4)
+            .shadow(color: .black.opacity(0.10), radius: 5, y: 5)
     }
 
     private var keyCap: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 5) {
             HStack {
                 StatusLED(status: agent.status, emphasized: isSelected)
 
@@ -39,11 +39,7 @@ struct AgentKey: View {
                     .foregroundStyle(.tertiary)
             }
 
-            Spacer(minLength: 0)
-
             StatusLight(status: agent.status, isSelected: isSelected)
-
-            Spacer(minLength: 0)
 
             Text(agent.name)
                 .font(.system(.caption, design: .rounded, weight: .bold))
@@ -52,37 +48,38 @@ struct AgentKey: View {
                 .lineLimit(1)
 
             Text(agent.status.label.uppercased())
-                .font(.system(.caption2, design: .rounded, weight: .black))
-                .tracking(0.32)
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .tracking(0.65)
                 .foregroundStyle(agent.status.color)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
         }
-        .padding(11)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
         .background {
-            RoundedRectangle(cornerRadius: 21, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(
                     LinearGradient(
                         colors: [
-                            .white,
+                            Color(white: 0.995),
                             isSelected
-                                ? agent.status.color.opacity(0.16)
-                                : Color(red: 0.95, green: 0.96, blue: 0.98)
+                                ? agent.status.color.opacity(0.09)
+                                : Color(red: 0.945, green: 0.953, blue: 0.965)
                         ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
                 )
                 .overlay {
-                    RoundedRectangle(cornerRadius: 21, style: .continuous)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(
-                            isSelected ? agent.status.color.opacity(0.72) : .white.opacity(0.98),
-                            lineWidth: isSelected ? 2 : 1
+                            isSelected ? agent.status.color.opacity(0.72) : .white.opacity(0.90),
+                            lineWidth: isSelected ? 1.5 : 1
                         )
                 }
                 .overlay(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 21, style: .continuous)
-                        .stroke(.white.opacity(0.92), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.72), lineWidth: 1)
                 }
         }
         .overlay(alignment: .bottomTrailing) {
@@ -91,7 +88,7 @@ struct AgentKey: View {
                     .font(.system(size: 13, weight: .bold))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(agent.status.color)
-                    .padding(9)
+                    .padding(7)
                     .transition(.scale.combined(with: .opacity))
             }
         }
@@ -128,12 +125,12 @@ private struct StatusLight: View {
         ZStack {
             Circle()
                 .fill(status.color.opacity(isSelected ? 0.27 : 0.13))
-                .frame(width: 49, height: 49)
-                .blur(radius: isSelected ? 5 : 3)
+                .frame(width: 42, height: 42)
+                .blur(radius: isSelected ? 4 : 2)
 
             Circle()
                 .stroke(status.color.opacity(isSelected ? 0.88 : 0.62), lineWidth: isSelected ? 2 : 1.5)
-                .frame(width: 42, height: 42)
+                .frame(width: 37, height: 37)
 
             Circle()
                 .fill(
@@ -144,33 +141,33 @@ private struct StatusLight: View {
                         endRadius: 22
                     )
                 )
-                .frame(width: 34, height: 34)
+                .frame(width: 29, height: 29)
                 .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
 
             Image(status.assetName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 28, height: 28)
+                .frame(width: 23, height: 23)
                 .accessibilityHidden(true)
         }
-        .shadow(color: status.color.opacity(isSelected ? 0.35 : 0.13), radius: 8)
+        .shadow(color: status.color.opacity(isSelected ? 0.28 : 0.10), radius: 6)
     }
 }
 
 struct EmptyKey: View {
-    @ScaledMetric(relativeTo: .caption) private var keyHeight = 114
+    @ScaledMetric(relativeTo: .caption) private var keyHeight = 102
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 21, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.black.opacity(0.10))
                 .offset(y: 5)
 
-            RoundedRectangle(cornerRadius: 21, style: .continuous)
-                .fill(.white.opacity(0.38))
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.white.opacity(0.26))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 21, style: .continuous)
-                        .stroke(.white.opacity(0.72), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.58), lineWidth: 1)
                 }
 
             Image(systemName: "plus")
@@ -187,22 +184,22 @@ struct CommandKey: View {
     let systemImage: String
     let tint: Color
     let action: () -> Void
-    @ScaledMetric(relativeTo: .caption2) private var keyHeight = 62
+    @ScaledMetric(relativeTo: .caption2) private var keyHeight = 56
 
     var body: some View {
         Button(action: action) {
             ZStack {
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .fill(Color.black.opacity(0.12))
-                    .offset(y: 4)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.black.opacity(0.11))
+                    .offset(y: 3)
 
-                VStack(spacing: 6) {
+                VStack(spacing: 5) {
                     Image(systemName: systemImage)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
 
                     Text(title)
-                        .font(.system(.caption2, design: .rounded, weight: .black))
-                        .tracking(0.42)
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .tracking(0.2)
                         .minimumScaleFactor(0.74)
                         .lineLimit(1)
                 }
@@ -210,7 +207,7 @@ struct CommandKey: View {
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: keyHeight)
                 .background {
-                    RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [.white, Color(red: 0.94, green: 0.95, blue: 0.97)],
@@ -219,8 +216,8 @@ struct CommandKey: View {
                             )
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                                .stroke(.white.opacity(0.95), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(.white.opacity(0.88), lineWidth: 1)
                         }
                 }
             }

@@ -6,7 +6,7 @@ struct ControlDeckView: View {
     @State private var activeSheet: DeckSheet?
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 9), count: 3)
 
     var body: some View {
         NavigationStack {
@@ -14,12 +14,12 @@ struct ControlDeckView: View {
                 DeckBackground()
 
                 ScrollView {
-                    VStack(spacing: 14) {
+                    VStack(spacing: 11) {
                         header
                         hardwareDeck
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.horizontal, 13)
+                    .padding(.top, 5)
                     .padding(.bottom, 30)
                 }
                 .scrollIndicators(.hidden)
@@ -56,7 +56,7 @@ struct ControlDeckView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ZStack {
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
                     .fill(.black)
@@ -66,12 +66,12 @@ struct ControlDeckView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.white)
             }
-            .frame(width: 44, height: 44)
+            .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("AgentKeys")
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
-                    .tracking(-0.4)
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                    .tracking(-0.3)
 
                 HStack(spacing: 6) {
                     StatusLamp(color: connectionColor, size: 7)
@@ -116,14 +116,14 @@ struct ControlDeckView: View {
             accent: activeAccent,
             reduceTransparency: reduceTransparency
         ) {
-            VStack(spacing: 14) {
+            VStack(spacing: 12) {
                 HardwareSectionHeader(
                     title: "Agent channels",
                     detail: "\(store.agents.count) agents",
                     systemImage: "dot.radiowaves.left.and.right"
                 )
 
-                LazyVGrid(columns: columns, spacing: 12) {
+                LazyVGrid(columns: columns, spacing: 10) {
                     ForEach(store.agents) { agent in
                         AgentKey(agent: agent, isSelected: store.selectedAgentID == agent.id) {
                             store.selectedAgentID = agent.id
@@ -138,7 +138,6 @@ struct ControlDeckView: View {
                 selectedAgentModule
                 capabilityControls
                 workflowConsole
-                DeckDivider(accent: activeAccent)
 
                 HardwareSectionHeader(
                     title: "Command keys",
@@ -150,12 +149,21 @@ struct ControlDeckView: View {
                     CommandKey(title: "Interrupt", systemImage: "bolt.fill", tint: .primary) {
                         Task { await store.perform(.interrupt) }
                     }
+                    .disabled(!canInterrupt)
+                    .opacity(canInterrupt ? 1 : 0.42)
+
                     CommandKey(title: rejectLabel, systemImage: "xmark", tint: .red) {
                         Task { await store.perform(.reject) }
                     }
+                    .disabled(!canResolveApproval)
+                    .opacity(canResolveApproval ? 1 : 0.42)
+
                     CommandKey(title: approveLabel, systemImage: "checkmark", tint: .green) {
                         Task { await store.perform(.approve) }
                     }
+                    .disabled(!canResolveApproval)
+                    .opacity(canResolveApproval ? 1 : 0.42)
+
                     CommandKey(title: "New", systemImage: "plus.bubble", tint: .blue) {
                         Task { await store.perform(.newChat) }
                     }
@@ -164,21 +172,17 @@ struct ControlDeckView: View {
                 promptBay
                 voiceKey
 
-                HStack {
-                    Text("AGENTKEYS // CONTROL DECK 01")
-                    Spacer()
-                    Text("BUILD WITH AGENTS")
-                }
-                .font(.system(size: 7, weight: .bold, design: .monospaced))
-                .tracking(0.65)
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, 4)
+                Text("AGENTKEYS  /  CONTROL DECK 01")
+                    .font(.system(size: 7, weight: .bold, design: .monospaced))
+                    .tracking(0.8)
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
     }
 
     private var selectedAgentModule: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: 12) {
             if let status = store.selectedAgent?.status {
                 ZStack {
                     Circle()
@@ -187,9 +191,9 @@ struct ControlDeckView: View {
                         .blur(radius: 5)
 
                     Circle()
-                        .fill(.white.opacity(0.74))
+                        .fill(.white.opacity(0.10))
                         .overlay {
-                            Circle().stroke(status.color.opacity(0.38), lineWidth: 1)
+                            Circle().stroke(status.color.opacity(0.62), lineWidth: 1)
                         }
 
                     Image(status.assetName)
@@ -205,35 +209,49 @@ struct ControlDeckView: View {
                 HStack(spacing: 7) {
                     Text(store.selectedAgent?.name ?? "No agent selected")
                         .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .foregroundStyle(.white)
                         .lineLimit(1)
 
                     if let provider = store.selectedAgent?.provider {
-                        ProviderBadge(provider: provider, model: store.selectedAgent?.model)
+                        ProviderBadge(provider: provider, model: store.selectedAgent?.model, inverted: true)
+                    }
+
+                    Spacer(minLength: 6)
+
+                    if let status = store.selectedAgent?.status {
+                        StatusPill(status: status)
                     }
                 }
 
                 Text(store.selectedAgent?.task ?? "Connect a companion to see active work.")
                     .font(.system(.callout, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
+                    .foregroundStyle(.white.opacity(0.60))
+                    .lineLimit(store.selectedAgent?.branch == nil ? 2 : 1)
 
-            Spacer(minLength: 8)
-
-            if let status = store.selectedAgent?.status {
-                StatusPill(status: status)
+                if let branch = store.selectedAgent?.branch {
+                    Label(branch, systemImage: "arrow.triangle.branch")
+                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.42))
+                        .lineLimit(1)
+                }
             }
         }
-        .padding(.horizontal, 13)
-        .padding(.vertical, 11)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
         .background {
             RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .fill(Color.black.opacity(0.035))
+                .fill(
+                    LinearGradient(
+                        colors: [Color(white: 0.10), Color(white: 0.055)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .overlay {
                     RoundedRectangle(cornerRadius: 17, style: .continuous)
-                        .stroke(.white.opacity(0.76), lineWidth: 1)
+                        .stroke(.white.opacity(0.16), lineWidth: 1)
                 }
-                .shadow(color: .black.opacity(0.07), radius: 2, y: -1)
+                .shadow(color: .black.opacity(0.20), radius: 7, y: 4)
         }
     }
 
@@ -255,6 +273,7 @@ struct ControlDeckView: View {
                 Task { await store.cycleSpeed() }
             }
             .opacity((store.selectedAgent?.capabilities.speeds.count ?? 0) > 1 ? 1 : 0.54)
+            .disabled((store.selectedAgent?.capabilities.speeds.count ?? 0) <= 1)
 
             MiniControlKey(
                 eyebrow: "EFFORT",
@@ -266,21 +285,22 @@ struct ControlDeckView: View {
 
             MiniControlKey(
                 eyebrow: "BRANCH",
-                value: store.selectedAgent?.branch ?? "New",
+                value: store.selectedAgent?.branch == nil ? "New" : "Open",
                 systemImage: "arrow.triangle.branch"
             ) {
                 activeSheet = .branch
             }
             .opacity(store.selectedAgent?.capabilities.supportsBranch == true ? 1 : 0.54)
+            .disabled(store.selectedAgent?.capabilities.supportsBranch != true)
         }
     }
 
     private var workflowConsole: some View {
         VStack(spacing: 9) {
             HardwareSectionHeader(
-                title: "Workflow joystick",
-                detail: "Flick to run",
-                systemImage: "dpad"
+                title: "Macro bank",
+                detail: "Tap to run",
+                systemImage: "square.grid.2x2"
             )
 
             WorkflowPad(workflows: store.selectedAgent?.capabilities.workflows ?? []) { workflow in
@@ -407,6 +427,14 @@ struct ControlDeckView: View {
     private var rejectLabel: String {
         store.selectedAgent?.provider == .claudeCode ? "Deny" : "Reject"
     }
+
+    private var canInterrupt: Bool {
+        store.selectedAgent?.status == .thinking
+    }
+
+    private var canResolveApproval: Bool {
+        store.selectedAgent?.status == .needsInput
+    }
 }
 
 private enum DeckSheet: String, Identifiable {
@@ -420,17 +448,17 @@ private enum DeckSheet: String, Identifiable {
 private struct DeckBackground: View {
     var body: some View {
         ZStack {
-            Color(red: 0.935, green: 0.95, blue: 0.975)
+            Color(red: 0.925, green: 0.935, blue: 0.95)
 
             RadialGradient(
-                colors: [.cyan.opacity(0.11), .clear],
+                colors: [.white.opacity(0.72), .clear],
                 center: .topTrailing,
-                startRadius: 15,
-                endRadius: 340
+                startRadius: 10,
+                endRadius: 310
             )
 
             RadialGradient(
-                colors: [.blue.opacity(0.07), .clear],
+                colors: [.blue.opacity(0.035), .clear],
                 center: .bottomLeading,
                 startRadius: 10,
                 endRadius: 390
@@ -448,46 +476,41 @@ private struct HardwareChassis<Content: View>: View {
 
     var body: some View {
         content
-            .padding(.horizontal, 14)
-            .padding(.vertical, 16)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 14)
             .background {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 31, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.cyan.opacity(0.34), .blue.opacity(0.22), accent.opacity(0.27)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .blur(radius: 13)
-                        .offset(y: 8)
-
-                    RoundedRectangle(cornerRadius: 31, style: .continuous)
+                    RoundedRectangle(cornerRadius: 27, style: .continuous)
                         .fill(
                             reduceTransparency
-                                ? AnyShapeStyle(Color.white.opacity(0.97))
-                                : AnyShapeStyle(.ultraThinMaterial)
+                                ? AnyShapeStyle(Color(red: 0.89, green: 0.91, blue: 0.93))
+                                : AnyShapeStyle(.thinMaterial)
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 31, style: .continuous)
-                                .fill(Color.white.opacity(reduceTransparency ? 0 : 0.33))
-                        }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 31, style: .continuous)
-                                .stroke(
-                                    colorSchemeContrast == .increased
-                                        ? Color.primary.opacity(0.42)
-                                        : Color.white.opacity(0.90),
-                                    lineWidth: 1.2
+                            RoundedRectangle(cornerRadius: 27, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.58), Color(red: 0.78, green: 0.82, blue: 0.86).opacity(0.34)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
                                 )
                         }
                         .overlay {
-                            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                .stroke(Color.black.opacity(0.055), lineWidth: 1)
-                                .padding(5)
+                            RoundedRectangle(cornerRadius: 27, style: .continuous)
+                                .stroke(
+                                    colorSchemeContrast == .increased
+                                        ? Color.primary.opacity(0.42)
+                                        : Color.white.opacity(0.82),
+                                    lineWidth: 1
+                                )
                         }
-                        .shadow(color: .black.opacity(0.12), radius: 17, y: 9)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 23, style: .continuous)
+                                .stroke(Color.black.opacity(0.07), lineWidth: 1)
+                                .padding(4)
+                        }
+                        .shadow(color: .black.opacity(0.13), radius: 14, y: 8)
 
                     chassisFasteners
 
@@ -501,10 +524,10 @@ private struct HardwareChassis<Content: View>: View {
                                     endPoint: .trailing
                                 )
                             )
-                            .frame(height: 3)
-                            .blur(radius: 1.4)
-                            .padding(.horizontal, 32)
-                            .padding(.bottom, 3)
+                            .frame(height: 2)
+                            .blur(radius: 1)
+                            .padding(.horizontal, 42)
+                            .padding(.bottom, 2)
                     }
                 }
             }
@@ -524,7 +547,7 @@ private struct HardwareChassis<Content: View>: View {
                 DeckFastener()
             }
         }
-        .padding(9)
+        .padding(8)
         .allowsHitTesting(false)
     }
 }
@@ -541,36 +564,17 @@ private struct HardwareSectionHeader: View {
                 .foregroundStyle(.secondary)
 
             Text(title.uppercased())
-                .font(.system(size: 10, weight: .black, design: .rounded))
-                .tracking(1.2)
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .tracking(1.35)
 
             Spacer()
 
             Text(detail)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .font(.system(size: 9, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
         .padding(.horizontal, 5)
-    }
-}
-
-private struct DeckDivider: View {
-    let accent: Color
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Rectangle()
-                .fill(.black.opacity(0.07))
-                .frame(height: 1)
-
-            StatusLamp(color: accent, size: 5)
-
-            Rectangle()
-                .fill(.white.opacity(0.78))
-                .frame(height: 1)
-        }
-        .padding(.horizontal, 3)
     }
 }
 
@@ -668,16 +672,18 @@ private struct StatusPill: View {
                 .lineLimit(1)
         }
         .font(.system(size: 10, weight: .bold, design: .rounded))
-        .foregroundStyle(status.color)
+        .foregroundStyle(.white.opacity(0.84))
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
-        .background(status.color.opacity(0.10), in: Capsule())
+        .background(.white.opacity(0.08), in: Capsule())
+        .overlay { Capsule().stroke(status.color.opacity(0.38), lineWidth: 1) }
     }
 }
 
 private struct ProviderBadge: View {
     let provider: AgentProvider
     let model: String?
+    var inverted = false
 
     var body: some View {
         HStack(spacing: 4) {
@@ -686,10 +692,10 @@ private struct ProviderBadge: View {
         }
         .font(.system(size: 7, weight: .black, design: .rounded))
         .tracking(0.55)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(inverted ? .white.opacity(0.58) : .secondary)
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
-        .background(.black.opacity(0.045), in: Capsule())
+        .background(inverted ? .white.opacity(0.07) : .black.opacity(0.045), in: Capsule())
     }
 
     private var badgeText: String {
@@ -708,16 +714,16 @@ private struct MiniControlKey: View {
     var body: some View {
         Button(action: action) {
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(.black.opacity(0.12))
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(.black.opacity(0.11))
                     .offset(y: 3)
 
                 VStack(spacing: 4) {
                     Image(systemName: systemImage)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
 
                     Text(value)
-                        .font(.system(size: 9, weight: .black, design: .rounded))
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.58)
 
@@ -728,12 +734,12 @@ private struct MiniControlKey: View {
                 }
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 58)
+                .frame(height: 54)
                 .padding(.horizontal, 4)
                 .background {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(LinearGradient(colors: [.white, Color(white: 0.94)], startPoint: .top, endPoint: .bottom))
-                        .overlay { RoundedRectangle(cornerRadius: 14).stroke(.white, lineWidth: 1) }
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(LinearGradient(colors: [Color(white: 0.99), Color(white: 0.925)], startPoint: .top, endPoint: .bottom))
+                        .overlay { RoundedRectangle(cornerRadius: 13).stroke(.white.opacity(0.84), lineWidth: 1) }
                 }
             }
         }
@@ -745,68 +751,36 @@ private struct MiniControlKey: View {
 private struct WorkflowPad: View {
     let workflows: [AgentWorkflow]
     let action: (AgentWorkflow) -> Void
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 2)
 
     var body: some View {
-        ZStack {
-            LazyVGrid(columns: columns, spacing: 12) {
+        LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(AgentWorkflow.allCases, id: \.self) { workflow in
                     let supported = workflows.contains(workflow)
                     Button { action(workflow) } label: {
                         HStack(spacing: 7) {
                             Image(systemName: workflow.systemImage)
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 13, weight: .semibold))
                             Text(workflow.label)
-                                .font(.system(size: 10, weight: .black, design: .rounded))
+                                .font(.system(size: 10, weight: .bold, design: .rounded))
                                 .lineLimit(1)
                             Spacer(minLength: 0)
                         }
                         .foregroundStyle(supported ? Color.primary : Color.secondary)
                         .padding(.horizontal, 12)
-                        .frame(maxWidth: .infinity, minHeight: 43)
+                        .frame(maxWidth: .infinity, minHeight: 40)
                         .background {
                             RoundedRectangle(cornerRadius: 13, style: .continuous)
                                 .fill(LinearGradient(colors: [.white, Color(white: 0.93)], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 .overlay { RoundedRectangle(cornerRadius: 13).stroke(.white, lineWidth: 1) }
-                                .shadow(color: .black.opacity(0.11), radius: 2, y: 3)
+                                .shadow(color: .black.opacity(0.09), radius: 2, y: 2)
                         }
                     }
                     .buttonStyle(TactileButtonStyle())
                     .disabled(!supported)
                     .opacity(supported ? 1 : 0.42)
                 }
-            }
-
-            JoystickPuck()
-                .allowsHitTesting(false)
         }
-        .padding(10)
-        .background {
-            RoundedRectangle(cornerRadius: 19, style: .continuous)
-                .fill(.black.opacity(0.055))
-                .overlay { RoundedRectangle(cornerRadius: 19).stroke(.white.opacity(0.74), lineWidth: 1) }
-        }
-    }
-}
-
-private struct JoystickPuck: View {
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(.black.opacity(0.22))
-                .frame(width: 33, height: 33)
-                .offset(y: 3)
-
-            Circle()
-                .fill(RadialGradient(colors: [Color(white: 0.28), .black], center: .topLeading, startRadius: 1, endRadius: 17))
-                .overlay { Circle().stroke(.white.opacity(0.22), lineWidth: 1) }
-
-            Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(.white.opacity(0.72))
-        }
-        .frame(width: 30, height: 30)
-        .shadow(color: .black.opacity(0.26), radius: 5, y: 3)
     }
 }
 

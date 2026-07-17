@@ -14,3 +14,7 @@ They use the project's original terminal-key visual identity and contain no thir
 The status and onboarding exports contain a real alpha channel. `scripts/process_status_icon.swift` reproducibly removes the status generator's baked transparency preview and crops each file to its single circular element. The onboarding images were generated on a flat `#ff00ff` chroma background and processed with the installed image-generation skill's soft-matte, despill-aware chroma removal helper.
 
 All generated files are distributed under the repository's MIT License.
+
+## Product screenshots
+
+`agentkeys-onboarding.png`, `agentkeys-simulator.png`, and `agentkeys-controls.png` are native-resolution captures from the real SwiftUI app on an iPhone 17 Pro simulator. They are not generated UI concepts. Refresh a product screenshot only after a successful simulator build, with demo data that contains no credentials or private prompts.
