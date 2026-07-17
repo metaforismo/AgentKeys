@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/agentkeys-hero.png" alt="A translucent AgentKeys control deck with approve, reject, terminal, microphone, and status keys" width="100%"></p>
+
 # AgentKeys
 
 An open-source, tactile iPhone control surface for coding agents.
@@ -83,3 +85,5 @@ Issues and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
+The original generated visual assets are documented in [assets/GENERATED_ASSETS.md](assets/GENERATED_ASSETS.md).
