@@ -12,10 +12,12 @@
 </p>
 
 <p align="center">
-  <a href="assets/agentkeys-simulator.png"><img src="assets/agentkeys-simulator.png" alt="AgentKeys running on an iPhone simulator, showing five coding agents in thinking, needs input, complete, idle, and error states" width="390"></a>
+  <a href="assets/agentkeys-onboarding.png"><img src="assets/agentkeys-onboarding.png" alt="AgentKeys onboarding on an iPhone simulator, showing a translucent illuminated agent key" width="360"></a>
+  &nbsp;&nbsp;
+  <a href="assets/agentkeys-simulator.png"><img src="assets/agentkeys-simulator.png" alt="AgentKeys control deck on an iPhone simulator, showing five coding agents in thinking, needs input, complete, idle, and error states" width="360"></a>
 </p>
 
-<p align="center"><sub>Actual AgentKeys build running on an iPhone 17 Pro simulator.</sub></p>
+<p align="center"><sub>First-run onboarding and the actual control deck, captured from the AgentKeys build on an iPhone 17 Pro simulator.</sub></p>
 
 AgentKeys turns the phone already on your desk into a compact console for agent work. See which tasks are active, waiting, complete, or failing; select an agent; dictate or type a prompt; and operate a provider-aware control deck for approvals, workflows, modes, effort, speed, and isolated branches.
 
@@ -25,6 +27,7 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 ## What works today
 
 - Native SwiftUI control deck for iPhone and iPad.
+- Three-page first-run introduction with instant demo and Mac-connector paths.
 - Five visually distinct agent states: `idle`, `thinking`, `complete`, `needs_input`, and `error`.
 - Live status polling through a small, documented local protocol.
 - Semantic action queue: `approve`, `reject`, `interrupt`, `new_chat`, and `prompt`.
@@ -75,7 +78,7 @@ xcodegen generate
 open AgentKeys.xcodeproj
 ```
 
-Build and run the `AgentKeys` scheme. The app starts in an interactive demo, so no connector or credentials are required to explore the interface.
+Build and run the `AgentKeys` scheme. The first-run introduction offers an instant interactive demo, so no connector or credentials are required to explore the interface. Choose **Connect a Mac** only when you are ready to pair the local companion; the introduction can be replayed from Connector settings.
 
 ## Run the Mac companion
 
@@ -107,7 +110,7 @@ This is the measured baseline. A streaming transcription service should replace 
 
 <p align="center"><img src="assets/agentkeys-hero.png" alt="AgentKeys visual identity with translucent tactile controls" width="100%"></p>
 
-The interface borrows the satisfying clarity of a physical macro pad while remaining a phone-native tool. Agent status is communicated through icon, text, and color so the meaning does not depend on color alone.
+The interface borrows the satisfying clarity of a physical macro pad while remaining a phone-native tool. The first-run flow teaches monitoring, command, and provider switching before revealing the denser control deck. Agent status is communicated through icon, text, and color so the meaning does not depend on color alone.
 
 Generated visual assets and their reproducible processing steps are documented in [assets/GENERATED_ASSETS.md](assets/GENERATED_ASSETS.md).
 

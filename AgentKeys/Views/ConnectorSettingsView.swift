@@ -3,6 +3,7 @@ import SwiftUI
 struct ConnectorSettingsView: View {
     @Bindable var store: AgentStore
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var scheme: ConnectorScheme = .https
     @State private var host = ""
     @State private var port = "7777"
@@ -45,6 +46,13 @@ struct ConnectorSettingsView: View {
                     Text("AgentKeys sends semantic actions only. The companion never accepts arbitrary shell commands from the phone. Prefer HTTPS. Use local HTTP only over loopback or a private Tailscale connection.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+
+                Section("Help") {
+                    Button("Replay introduction") {
+                        hasCompletedOnboarding = false
+                        dismiss()
+                    }
                 }
             }
             .navigationTitle("Connector")

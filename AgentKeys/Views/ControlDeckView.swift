@@ -36,6 +36,17 @@ struct ControlDeckView: View {
                 }
             }
             .task { store.startPolling() }
+            .onAppear {
+                if store.isSettingsPresented {
+                    activeSheet = .settings
+                    store.isSettingsPresented = false
+                }
+            }
+            .onChange(of: store.isSettingsPresented) { _, shouldPresent in
+                guard shouldPresent else { return }
+                activeSheet = .settings
+                store.isSettingsPresented = false
+            }
             .onDisappear { store.stopPolling() }
             .onChange(of: recorder.transcript) { _, newValue in
                 store.prompt = newValue

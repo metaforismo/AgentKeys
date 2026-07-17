@@ -3,6 +3,7 @@
 ## 0.1 — trustworthy foundation
 
 - [x] Native tactile agent grid and command deck
+- [x] Native first-run onboarding with demo and connector paths
 - [x] Interactive demo and live snapshot polling
 - [x] Small semantic action protocol
 - [x] Separate phone and harness credentials

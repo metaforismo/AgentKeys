@@ -1,6 +1,6 @@
 # Generated visual assets
 
-The AgentKeys app icon, repository hero, and five agent-status elements were generated for this project with OpenAI image generation on 2026-07-17, then resized and cropped locally for their target formats.
+The AgentKeys app icon, repository hero, five agent-status elements, and three onboarding illustrations were generated for this project with OpenAI image generation on 2026-07-17, then processed locally for their target formats.
 
 They use the project's original terminal-key visual identity and contain no third-party logos or copied product text. Source references were supplied only for the requested tactile material, lighting, and translucent-keycap style.
 
@@ -8,8 +8,9 @@ They use the project's original terminal-key visual identity and contain no thir
 
 - `AgentKeys/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png` — 1024×1024 iOS app icon
 - `AgentKeys/Resources/Assets.xcassets/Status*.imageset/*.png` — five 512×512 transparent, single-element status assets
+- `AgentKeys/Resources/Assets.xcassets/Onboarding*.imageset/*.png` — three 1024×1024 transparent, single-object onboarding illustrations
 - `assets/agentkeys-hero.png` — 1280×640 README/social hero
 
-The status exports contain a real alpha channel. `scripts/process_status_icon.swift` reproducibly removes the generator's baked transparency preview and crops each file to its single circular element.
+The status and onboarding exports contain a real alpha channel. `scripts/process_status_icon.swift` reproducibly removes the status generator's baked transparency preview and crops each file to its single circular element. The onboarding images were generated on a flat `#ff00ff` chroma background and processed with the installed image-generation skill's soft-matte, despill-aware chroma removal helper.
 
-Both files are distributed under the repository's MIT License.
+All generated files are distributed under the repository's MIT License.
