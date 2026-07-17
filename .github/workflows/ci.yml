@@ -15,8 +15,8 @@ jobs:
       run:
         working-directory: connector
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm test
@@ -24,7 +24,7 @@ jobs:
   ios:
     runs-on: macos-15-intel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: brew install xcodegen
       - run: xcodegen generate
       - run: xcodebuild -project AgentKeys.xcodeproj -scheme AgentKeys -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.5' -derivedDataPath .build/DerivedData CODE_SIGNING_ALLOWED=NO test
