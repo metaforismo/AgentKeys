@@ -4,19 +4,23 @@ struct ControlDeckView: View {
     @Bindable var store: AgentStore
     @State private var recorder = SpeechPromptRecorder()
     @State private var activeSheet: DeckSheet?
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 9), count: 3)
 
     var body: some View {
         NavigationStack {
             ZStack {
-                DeckBackground()
+                StudioBackground()
 
                 ScrollView {
-                    deviceSurface
-                        .padding(.top, 20)
-                        .padding(.bottom, 24)
+                    DeviceControlSurface(
+                        store: store,
+                        recorder: recorder,
+                        onOpenControls: { activeSheet = .controls },
+                        onOpenBranch: { activeSheet = .branch },
+                        onOpenSettings: { activeSheet = .settings }
+                    )
+                    .padding(.horizontal, 14)
+                    .padding(.top, 18)
+                    .padding(.bottom, 28)
                 }
                 .scrollIndicators(.hidden)
             }
@@ -50,398 +54,6 @@ struct ControlDeckView: View {
             .sensoryFeedback(.selection, trigger: store.selectedAgentID)
         }
     }
-
-    private var deviceSurface: some View {
-        DeviceControlSurface(
-            store: store,
-            recorder: recorder,
-            onOpenControls: { activeSheet = .controls },
-            onOpenBranch: { activeSheet = .branch },
-            onOpenSettings: { activeSheet = .settings }
-        )
-        .padding(.horizontal, 12)
-    }
-
-    private var header: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(.black)
-                    .shadow(color: .black.opacity(0.22), radius: 8, y: 4)
-
-                Image(systemName: "command")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 40, height: 40)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("AgentKeys")
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
-                    .tracking(-0.3)
-
-                HStack(spacing: 6) {
-                    StatusLamp(color: connectionColor, size: 7)
-                    Text(store.connectionState.label.uppercased())
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .tracking(1.15)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            HStack(spacing: 8) {
-                Button {
-                    activeSheet = .controls
-                } label: {
-                    RotaryControl()
-                }
-                .buttonStyle(TactileButtonStyle())
-                .accessibilityLabel("Agent mode and effort controls")
-
-                Button {
-                    activeSheet = .settings
-                } label: {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 34, height: 34)
-                        .background(.white.opacity(0.72), in: Circle())
-                        .overlay { Circle().stroke(.white, lineWidth: 1) }
-                        .shadow(color: .black.opacity(0.10), radius: 4, y: 2)
-                }
-                .buttonStyle(TactileButtonStyle())
-                .accessibilityLabel("Connector settings")
-            }
-        }
-        .padding(.horizontal, 2)
-    }
-
-    private var hardwareDeck: some View {
-        HardwareChassis(
-            accent: activeAccent,
-            reduceTransparency: reduceTransparency
-        ) {
-            VStack(spacing: 12) {
-                HardwareSectionHeader(
-                    title: "Agent channels",
-                    detail: "\(store.agents.count) agents",
-                    systemImage: "dot.radiowaves.left.and.right"
-                )
-
-                LazyVGrid(columns: columns, spacing: 10) {
-                    ForEach(store.agents) { agent in
-                        AgentKey(agent: agent, isSelected: store.selectedAgentID == agent.id) {
-                            store.selectedAgentID = agent.id
-                        }
-                    }
-
-                    ForEach(0..<max(0, 6 - store.agents.count), id: \.self) { _ in
-                        EmptyKey()
-                    }
-                }
-
-                selectedAgentModule
-                capabilityControls
-                workflowConsole
-
-                HardwareSectionHeader(
-                    title: "Command keys",
-                    detail: store.selectedAgent?.name ?? "No target",
-                    systemImage: "switch.2"
-                )
-
-                HStack(spacing: 10) {
-                    CommandKey(title: "Interrupt", systemImage: "bolt.fill", tint: .primary) {
-                        Task { await store.perform(.interrupt) }
-                    }
-                    .disabled(!canInterrupt)
-                    .opacity(canInterrupt ? 1 : 0.42)
-
-                    CommandKey(title: rejectLabel, systemImage: "xmark", tint: .red) {
-                        Task { await store.perform(.reject) }
-                    }
-                    .disabled(!canResolveApproval)
-                    .opacity(canResolveApproval ? 1 : 0.42)
-
-                    CommandKey(title: approveLabel, systemImage: "checkmark", tint: .green) {
-                        Task { await store.perform(.approve) }
-                    }
-                    .disabled(!canResolveApproval)
-                    .opacity(canResolveApproval ? 1 : 0.42)
-
-                    CommandKey(title: "New", systemImage: "plus.bubble", tint: .blue) {
-                        Task { await store.perform(.newChat) }
-                    }
-                }
-
-                promptBay
-                voiceKey
-
-                Text("AGENTKEYS  /  CONTROL DECK 01")
-                    .font(.system(size: 7, weight: .bold, design: .monospaced))
-                    .tracking(0.8)
-                    .foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-        }
-    }
-
-    private var selectedAgentModule: some View {
-        HStack(spacing: 12) {
-            if let status = store.selectedAgent?.status {
-                ZStack {
-                    Circle()
-                        .fill(status.color.opacity(0.15))
-                        .frame(width: 43, height: 43)
-                        .blur(radius: 5)
-
-                    Circle()
-                        .fill(.white.opacity(0.10))
-                        .overlay {
-                            Circle().stroke(status.color.opacity(0.62), lineWidth: 1)
-                        }
-
-                    Image(status.assetName)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(6)
-                        .accessibilityHidden(true)
-                }
-                .frame(width: 35, height: 35)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 7) {
-                    Text(store.selectedAgent?.name ?? "No agent selected")
-                        .font(.system(.subheadline, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-
-                    if let provider = store.selectedAgent?.provider {
-                        ProviderBadge(provider: provider, model: store.selectedAgent?.model, inverted: true)
-                    }
-
-                    Spacer(minLength: 6)
-
-                    if let status = store.selectedAgent?.status {
-                        StatusPill(status: status)
-                    }
-                }
-
-                Text(store.selectedAgent?.task ?? "Connect a companion to see active work.")
-                    .font(.system(.callout, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.60))
-                    .lineLimit(store.selectedAgent?.branch == nil ? 2 : 1)
-
-                if let branch = store.selectedAgent?.branch {
-                    Label(branch, systemImage: "arrow.triangle.branch")
-                        .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.42))
-                        .lineLimit(1)
-                }
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 13)
-        .background {
-            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(white: 0.10), Color(white: 0.055)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 17, style: .continuous)
-                        .stroke(.white.opacity(0.16), lineWidth: 1)
-                }
-                .shadow(color: .black.opacity(0.20), radius: 7, y: 4)
-        }
-    }
-
-    private var capabilityControls: some View {
-        HStack(spacing: 8) {
-            MiniControlKey(
-                eyebrow: "MODE",
-                value: store.selectedAgent?.mode.label ?? "—",
-                systemImage: "switch.2"
-            ) {
-                Task { await store.cycleMode() }
-            }
-
-            MiniControlKey(
-                eyebrow: "SPEED",
-                value: store.selectedAgent?.speed.label ?? "—",
-                systemImage: store.selectedAgent?.speed == .fast ? "hare.fill" : "speedometer"
-            ) {
-                Task { await store.cycleSpeed() }
-            }
-            .opacity((store.selectedAgent?.capabilities.speeds.count ?? 0) > 1 ? 1 : 0.54)
-            .disabled((store.selectedAgent?.capabilities.speeds.count ?? 0) <= 1)
-
-            MiniControlKey(
-                eyebrow: "EFFORT",
-                value: store.selectedAgent?.effort.label ?? "—",
-                systemImage: "dial.medium"
-            ) {
-                Task { await store.cycleEffort() }
-            }
-
-            MiniControlKey(
-                eyebrow: "BRANCH",
-                value: store.selectedAgent?.branch == nil ? "New" : "Open",
-                systemImage: "arrow.triangle.branch"
-            ) {
-                activeSheet = .branch
-            }
-            .opacity(store.selectedAgent?.capabilities.supportsBranch == true ? 1 : 0.54)
-            .disabled(store.selectedAgent?.capabilities.supportsBranch != true)
-        }
-    }
-
-    private var workflowConsole: some View {
-        VStack(spacing: 9) {
-            HardwareSectionHeader(
-                title: "Macro bank",
-                detail: "Tap to run",
-                systemImage: "square.grid.2x2"
-            )
-
-            WorkflowPad(workflows: store.selectedAgent?.capabilities.workflows ?? []) { workflow in
-                Task { await store.run(workflow) }
-            }
-        }
-    }
-
-    private var promptBay: some View {
-        HStack(spacing: 8) {
-            TextField("Prompt the selected agent", text: $store.prompt, axis: .vertical)
-                .lineLimit(1...3)
-                .font(.system(.body, design: .rounded))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-
-            Button {
-                let text = trimmedPrompt
-                guard !text.isEmpty else { return }
-                Task { await store.perform(.prompt, text: text) }
-            } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(.black, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(alignment: .top) {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(.white.opacity(0.24), lineWidth: 1)
-                    }
-                    .shadow(color: .black.opacity(0.22), radius: 5, y: 3)
-            }
-            .buttonStyle(TactileButtonStyle())
-            .disabled(trimmedPrompt.isEmpty)
-            .opacity(trimmedPrompt.isEmpty ? 0.42 : 1)
-            .accessibilityLabel("Send prompt")
-            .padding(.trailing, 5)
-        }
-        .background {
-            RoundedRectangle(cornerRadius: 19, style: .continuous)
-                .fill(Color.black.opacity(0.055))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 19, style: .continuous)
-                        .stroke(.white.opacity(0.74), lineWidth: 1)
-                }
-        }
-    }
-
-    private var voiceKey: some View {
-        Button {
-            Task {
-                if recorder.isRecording {
-                    recorder.stop()
-                } else {
-                    await recorder.start()
-                }
-            }
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.black.opacity(0.18))
-                    .offset(y: 5)
-
-                HStack(spacing: 10) {
-                    Image(systemName: recorder.isRecording ? "waveform" : "mic.fill")
-                        .symbolEffect(.variableColor.iterative, isActive: recorder.isRecording)
-
-                    Text(recorder.isRecording ? "Listening… tap to stop" : "Push to talk")
-                        .font(.system(.headline, design: .rounded, weight: .bold))
-                }
-                .foregroundStyle(recorder.isRecording ? .pink : .blue)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.white, Color(red: 0.90, green: 0.93, blue: 0.97)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(voiceColor.opacity(0.54), lineWidth: 1.25)
-                        }
-                        .overlay(alignment: .top) {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(.white.opacity(0.94), lineWidth: 1)
-                        }
-                        .shadow(color: voiceColor.opacity(0.23), radius: 9, y: 5)
-                }
-            }
-        }
-        .buttonStyle(TactileButtonStyle())
-        .accessibilityHint("Uses Apple speech recognition to fill the prompt field")
-    }
-
-    private var trimmedPrompt: String {
-        store.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var voiceColor: Color {
-        recorder.isRecording ? .pink : .blue
-    }
-
-    private var activeAccent: Color {
-        store.selectedAgent?.status.color ?? .cyan
-    }
-
-    private var connectionColor: Color {
-        switch store.connectionState {
-        case .demo: .orange
-        case .connecting: .blue
-        case .connected: .green
-        case .failed: .red
-        }
-    }
-
-    private var approveLabel: String {
-        store.selectedAgent?.provider == .claudeCode ? "Allow" : "Approve"
-    }
-
-    private var rejectLabel: String {
-        store.selectedAgent?.provider == .claudeCode ? "Deny" : "Reject"
-    }
-
-    private var canInterrupt: Bool {
-        store.selectedAgent?.status == .thinking
-    }
-
-    private var canResolveApproval: Bool {
-        store.selectedAgent?.status == .needsInput
-    }
 }
 
 private enum DeckSheet: String, Identifiable {
@@ -452,344 +64,32 @@ private enum DeckSheet: String, Identifiable {
     var id: String { rawValue }
 }
 
-private struct DeckBackground: View {
+/// Neutral studio backdrop — the seamless white sweep behind the product shots.
+private struct StudioBackground: View {
     var body: some View {
         ZStack {
-            Color(red: 0.925, green: 0.935, blue: 0.95)
+            DeckTheme.studio
 
             RadialGradient(
-                colors: [.white.opacity(0.72), .clear],
-                center: .topTrailing,
-                startRadius: 10,
-                endRadius: 310
+                colors: [.white.opacity(0.8), .clear],
+                center: .top,
+                startRadius: 20,
+                endRadius: 420
             )
 
+            // Faint color bounce from the underglow onto the table.
             RadialGradient(
-                colors: [.blue.opacity(0.035), .clear],
-                center: .bottomLeading,
-                startRadius: 10,
-                endRadius: 390
+                colors: [DeckTheme.glow[1].opacity(0.10), .clear],
+                center: .bottom,
+                startRadius: 20,
+                endRadius: 380
             )
         }
         .ignoresSafeArea()
     }
 }
 
-private struct HardwareChassis<Content: View>: View {
-    let accent: Color
-    let reduceTransparency: Bool
-    @ViewBuilder let content: Content
-    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
-
-    var body: some View {
-        content
-            .padding(.horizontal, 13)
-            .padding(.vertical, 14)
-            .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 27, style: .continuous)
-                        .fill(
-                            reduceTransparency
-                                ? AnyShapeStyle(Color(red: 0.89, green: 0.91, blue: 0.93))
-                                : AnyShapeStyle(.thinMaterial)
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 27, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.58), Color(red: 0.78, green: 0.82, blue: 0.86).opacity(0.34)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                )
-                        }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 27, style: .continuous)
-                                .stroke(
-                                    colorSchemeContrast == .increased
-                                        ? Color.primary.opacity(0.42)
-                                        : Color.white.opacity(0.82),
-                                    lineWidth: 1
-                                )
-                        }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 23, style: .continuous)
-                                .stroke(Color.black.opacity(0.07), lineWidth: 1)
-                                .padding(4)
-                        }
-                        .shadow(color: .black.opacity(0.13), radius: 14, y: 8)
-
-                    chassisFasteners
-
-                    VStack {
-                        Spacer()
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.cyan.opacity(0.15), .cyan.opacity(0.85), accent.opacity(0.64), .clear],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(height: 2)
-                            .blur(radius: 1)
-                            .padding(.horizontal, 42)
-                            .padding(.bottom, 2)
-                    }
-                }
-            }
-    }
-
-    private var chassisFasteners: some View {
-        VStack {
-            HStack {
-                DeckFastener()
-                Spacer()
-                DeckFastener()
-            }
-            Spacer()
-            HStack {
-                DeckFastener()
-                Spacer()
-                DeckFastener()
-            }
-        }
-        .padding(8)
-        .allowsHitTesting(false)
-    }
-}
-
-private struct HardwareSectionHeader: View {
-    let title: String
-    let detail: String
-    let systemImage: String
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.secondary)
-
-            Text(title.uppercased())
-                .font(.system(size: 9, weight: .bold, design: .rounded))
-                .tracking(1.35)
-
-            Spacer()
-
-            Text(detail)
-                .font(.system(size: 9, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 5)
-    }
-}
-
-private struct DeckFastener: View {
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.18, green: 0.19, blue: 0.21), .black],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-
-            Image(systemName: "hexagon.fill")
-                .font(.system(size: 5))
-                .foregroundStyle(.black.opacity(0.95))
-
-            Capsule()
-                .fill(.white.opacity(0.22))
-                .frame(width: 5, height: 1)
-                .rotationEffect(.degrees(-35))
-        }
-        .frame(width: 10, height: 10)
-        .shadow(color: .white.opacity(0.8), radius: 1, x: -1, y: -1)
-    }
-}
-
-private struct RotaryControl: View {
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.black.opacity(0.17))
-                .frame(width: 49, height: 49)
-                .offset(y: 4)
-
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [.white, Color(red: 0.76, green: 0.79, blue: 0.84)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay {
-                    Circle().stroke(.white, lineWidth: 1)
-                }
-
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [Color(red: 0.25, green: 0.26, blue: 0.28), .black],
-                        center: .topLeading,
-                        startRadius: 2,
-                        endRadius: 23
-                    )
-                )
-                .frame(width: 33, height: 33)
-
-            Image(systemName: "slider.horizontal.3")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
-        }
-        .frame(width: 47, height: 47)
-        .shadow(color: .black.opacity(0.16), radius: 7, y: 4)
-    }
-}
-
-private struct StatusLamp: View {
-    let color: Color
-    let size: CGFloat
-
-    var body: some View {
-        Circle()
-            .fill(color)
-            .frame(width: size, height: size)
-            .overlay(alignment: .topLeading) {
-                Circle()
-                    .fill(.white.opacity(0.8))
-                    .frame(width: size * 0.34, height: size * 0.34)
-                    .padding(size * 0.16)
-            }
-            .shadow(color: color.opacity(0.76), radius: size * 0.65)
-    }
-}
-
-private struct StatusPill: View {
-    let status: AgentStatus
-
-    var body: some View {
-        HStack(spacing: 5) {
-            StatusLamp(color: status.color, size: 6)
-            Text(status.label)
-                .lineLimit(1)
-        }
-        .font(.system(size: 10, weight: .bold, design: .rounded))
-        .foregroundStyle(.white.opacity(0.84))
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
-        .background(.white.opacity(0.08), in: Capsule())
-        .overlay { Capsule().stroke(status.color.opacity(0.38), lineWidth: 1) }
-    }
-}
-
-private struct ProviderBadge: View {
-    let provider: AgentProvider
-    let model: String?
-    var inverted = false
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: provider.systemImage)
-            Text(badgeText)
-        }
-        .font(.system(size: 7, weight: .black, design: .rounded))
-        .tracking(0.55)
-        .foregroundStyle(inverted ? .white.opacity(0.58) : .secondary)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(inverted ? .white.opacity(0.07) : .black.opacity(0.045), in: Capsule())
-    }
-
-    private var badgeText: String {
-        guard let model, model != "default" else { return provider.shortLabel }
-        let compactModel = model.hasPrefix("gpt-") ? String(model.dropFirst(4)) : model.uppercased()
-        return "\(provider.shortLabel) · \(compactModel)"
-    }
-}
-
-private struct MiniControlKey: View {
-    let eyebrow: String
-    let value: String
-    let systemImage: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(.black.opacity(0.11))
-                    .offset(y: 3)
-
-                VStack(spacing: 4) {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 12, weight: .semibold))
-
-                    Text(value)
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.58)
-
-                    Text(eyebrow)
-                        .font(.system(size: 6, weight: .bold, design: .monospaced))
-                        .tracking(0.45)
-                        .foregroundStyle(.tertiary)
-                }
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
-                .padding(.horizontal, 4)
-                .background {
-                    RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .fill(LinearGradient(colors: [Color(white: 0.99), Color(white: 0.925)], startPoint: .top, endPoint: .bottom))
-                        .overlay { RoundedRectangle(cornerRadius: 13).stroke(.white.opacity(0.84), lineWidth: 1) }
-                }
-            }
-        }
-        .buttonStyle(TactileButtonStyle())
-        .accessibilityLabel("\(eyebrow.capitalized), \(value)")
-    }
-}
-
-private struct WorkflowPad: View {
-    let workflows: [AgentWorkflow]
-    let action: (AgentWorkflow) -> Void
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 2)
-
-    var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(AgentWorkflow.allCases, id: \.self) { workflow in
-                    let supported = workflows.contains(workflow)
-                    Button { action(workflow) } label: {
-                        HStack(spacing: 7) {
-                            Image(systemName: workflow.systemImage)
-                                .font(.system(size: 13, weight: .semibold))
-                            Text(workflow.label)
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                        }
-                        .foregroundStyle(supported ? Color.primary : Color.secondary)
-                        .padding(.horizontal, 12)
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                        .background {
-                            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                                .fill(LinearGradient(colors: [.white, Color(white: 0.93)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .overlay { RoundedRectangle(cornerRadius: 13).stroke(.white, lineWidth: 1) }
-                                .shadow(color: .black.opacity(0.09), radius: 2, y: 2)
-                        }
-                    }
-                    .buttonStyle(TactileButtonStyle())
-                    .disabled(!supported)
-                    .opacity(supported ? 1 : 0.42)
-                }
-        }
-    }
-}
+// MARK: - Provider controls sheet
 
 private struct ProviderControlSheet: View {
     @Bindable var store: AgentStore
@@ -802,14 +102,14 @@ private struct ProviderControlSheet: View {
                     if let agent = store.selectedAgent {
                         HStack(spacing: 11) {
                             Image(systemName: agent.provider.systemImage)
-                                .font(.system(size: 20, weight: .bold))
+                                .font(.system(size: 20, weight: .medium))
                                 .frame(width: 44, height: 44)
-                                .background(.black, in: RoundedRectangle(cornerRadius: 13))
+                                .background(DeckTheme.ink, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                                 .foregroundStyle(.white)
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(agent.provider.label)
-                                    .font(.system(.headline, design: .rounded, weight: .bold))
+                                    .font(.system(.headline, weight: .semibold))
                                 Text("\(agent.harness) · \(agent.model)")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
@@ -854,15 +154,18 @@ private struct ProviderControlSheet: View {
 
                         if agent.capabilities.supportsWebSearch {
                             HStack(spacing: 12) {
-                                Image(systemName: "globe.americas.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                Image(systemName: "globe.americas")
+                                    .font(.system(size: 16, weight: .medium))
                                     .frame(width: 38, height: 38)
                                     .foregroundStyle(agent.webSearchEnabled ? .white : .primary)
-                                    .background(agent.webSearchEnabled ? Color.blue : Color.white, in: RoundedRectangle(cornerRadius: 11))
+                                    .background(
+                                        agent.webSearchEnabled ? Color.blue : Color.white,
+                                        in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    )
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Live web search")
-                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                        .font(.system(.subheadline, weight: .semibold))
                                     Text("Codex can search current sources when the adapter supports it.")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -878,7 +181,7 @@ private struct ProviderControlSheet: View {
                                 .tint(.blue)
                             }
                             .padding(12)
-                            .background(.white.opacity(0.78), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
 
                         if !agent.capabilities.workflows.isEmpty {
@@ -917,7 +220,7 @@ private struct ProviderControlSheet: View {
                 }
                 .padding(20)
             }
-            .background(Color(red: 0.95, green: 0.96, blue: 0.98))
+            .background(DeckTheme.studio)
             .navigationTitle("Agent controls")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -954,7 +257,7 @@ private struct ProviderControlSheet: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             Text(title)
-                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                .font(.system(.subheadline, weight: .semibold))
             FlowLayout(spacing: 8) { content() }
             Text(detail)
                 .font(.caption)
@@ -971,7 +274,7 @@ private struct SessionActionButton: View {
     var body: some View {
         Button(action: action) {
             Label(title, systemImage: systemImage)
-                .font(.system(.caption, design: .rounded, weight: .bold))
+                .font(.system(.caption, weight: .semibold))
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
@@ -982,6 +285,8 @@ private struct SessionActionButton: View {
     }
 }
 
+// MARK: - Branch sheet
+
 private struct BranchControlSheet: View {
     @Bindable var store: AgentStore
     @Environment(\.dismiss) private var dismiss
@@ -991,14 +296,14 @@ private struct BranchControlSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 18) {
                 Label("Isolated work", systemImage: "arrow.triangle.branch")
-                    .font(.system(.title3, design: .rounded, weight: .bold))
+                    .font(.system(.title3, weight: .semibold))
 
                 TextField("feat/my-change", text: $name)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .font(.system(.body, design: .monospaced))
                     .padding(14)
-                    .background(.black.opacity(0.055), in: RoundedRectangle(cornerRadius: 14))
+                    .background(.black.opacity(0.05), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 Text("Queues a validated create-branch or worktree request. The adapter chooses the native mechanism supported by Codex or Claude Code.")
                     .font(.footnote)
@@ -1010,18 +315,18 @@ private struct BranchControlSheet: View {
                     dismiss()
                 } label: {
                     Label("Create isolated branch", systemImage: "plus")
-                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .font(.system(.headline, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.black)
+                .tint(DeckTheme.ink)
                 .disabled(!isValid)
 
                 Spacer()
             }
             .padding(20)
-            .background(Color(red: 0.95, green: 0.96, blue: 0.98))
+            .background(DeckTheme.studio)
             .navigationTitle("Branch / worktree")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1046,6 +351,8 @@ private struct BranchControlSheet: View {
     }
 }
 
+// MARK: - Shared sheet controls
+
 private struct SelectorCapsule: View {
     let title: String
     let selected: Bool
@@ -1054,11 +361,11 @@ private struct SelectorCapsule: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(.caption, design: .rounded, weight: .bold))
+                .font(.system(.caption, weight: .semibold))
                 .foregroundStyle(selected ? .white : .primary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(selected ? Color.black : Color.white, in: Capsule())
+                .background(selected ? DeckTheme.ink : Color.white, in: Capsule())
                 .overlay { Capsule().stroke(.black.opacity(selected ? 0 : 0.10), lineWidth: 1) }
         }
         .buttonStyle(.plain)
@@ -1104,7 +411,7 @@ private struct FlowLayout: Layout {
     }
 }
 
-#Preview("Hardware control deck") {
+#Preview("Control deck") {
     ControlDeckView(store: AgentStore())
         .preferredColorScheme(.light)
 }

@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// The virtual macro pad: a frosted acrylic slab with RGB underglow, clear
+/// RGB-backlit agent switches, matte thin-line command keycaps, a rotary
+/// knob, a four-way stick, and silkscreen legends.
 struct DeviceControlSurface: View {
     @Bindable var store: AgentStore
     @Bindable var recorder: SpeechPromptRecorder
@@ -8,105 +11,287 @@ struct DeviceControlSurface: View {
     let onOpenBranch: () -> Void
     let onOpenSettings: () -> Void
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 4)
-
     private var selectedAgent: Agent? { store.selectedAgent }
-    private var accent: Color { selectedAgent?.status.color ?? .cyan }
 
     var body: some View {
-        VStack(spacing: 12) {
-            DeviceMasthead(
-                connectionLabel: store.connectionState.label,
-                connectionColor: connectionColor,
-                onSettings: onOpenSettings
-            )
-
-            AcrylicDeviceShell(accent: accent) {
-                VStack(spacing: 10) {
-                    DeviceSilkscreen()
-
-                    LazyVGrid(columns: columns, spacing: 9) {
-                        ModeKnob(
-                            value: selectedAgent?.mode.label ?? "—",
-                            action: cycleMode
-                        )
-
-                        agentSlot(at: 0)
-                        agentSlot(at: 1)
-
-                        AdvancedDial(action: onOpenControls)
-
-                        agentSlot(at: 2)
-                        agentSlot(at: 3)
-                        agentSlot(at: 4)
-                        AddAgentCap(action: onOpenSettings)
-
-                        DeviceCommandKey(
-                            title: "Interrupt",
-                            systemImage: "bolt.fill",
-                            tint: .primary,
-                            enabled: selectedAgent?.status == .thinking,
-                            action: interrupt
-                        )
-
-                        DeviceCommandKey(
-                            title: rejectLabel,
-                            systemImage: "xmark",
-                            tint: .red,
-                            enabled: selectedAgent?.status == .needsInput,
-                            action: reject
-                        )
-
-                        DeviceCommandKey(
-                            title: approveLabel,
-                            systemImage: "checkmark",
-                            tint: .green,
-                            enabled: selectedAgent?.status == .needsInput,
-                            action: approve
-                        )
-
-                        DeviceCommandKey(
-                            title: "New",
-                            systemImage: "arrow.up.right",
-                            tint: .primary,
-                            enabled: selectedAgent != nil,
-                            action: newChat
-                        )
-                    }
-
-                    SelectedAgentDisplay(
-                        agent: selectedAgent,
-                        onBranch: onOpenBranch
-                    )
-
-                    PromptConsole(
-                        text: $store.prompt,
-                        isRecording: recorder.isRecording,
-                        onSend: sendPrompt,
-                        onVoice: toggleRecording
-                    )
-
-                    Text("AGENTKEYS  /  WIRELESS CONTROL UNIT  /  01")
-                        .font(.system(size: 6, weight: .bold, design: .monospaced))
-                        .tracking(0.7)
-                        .foregroundStyle(.black.opacity(0.32))
-                }
+        VStack(spacing: 14) {
+            masthead
+            AcrylicSlab(accent: selectedAgent?.status.color) {
+                boardLayout
             }
         }
     }
+
+    // MARK: - Masthead
+
+    private var masthead: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("AgentKeys")
+                    .font(.system(size: 21, weight: .semibold))
+                    .tracking(-0.4)
+                    .foregroundStyle(DeckTheme.ink)
+
+                HStack(spacing: 6) {
+                    DeckLED(color: connectionColor, size: 6)
+                    Text(store.connectionState.label.uppercased())
+                        .font(.system(size: 9, weight: .semibold))
+                        .kerning(1.3)
+                        .foregroundStyle(DeckTheme.silkscreen.opacity(0.75))
+                }
+            }
+
+            Spacer()
+
+            Button(action: onOpenSettings) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(DeckTheme.ink.opacity(0.65))
+                    .frame(width: 38, height: 38)
+                    .background(.white.opacity(0.85), in: Circle())
+                    .overlay { Circle().stroke(.white, lineWidth: 1) }
+                    .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+            }
+            .buttonStyle(TactileButtonStyle())
+            .accessibilityLabel("Connector settings")
+        }
+        .padding(.horizontal, 6)
+    }
+
+    // MARK: - Board
+
+    private var boardLayout: some View {
+        VStack(spacing: 13) {
+            Image(systemName: "arrow.up")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(DeckTheme.silkscreen.opacity(0.7))
+                .accessibilityHidden(true)
+
+            // Row 1 — knob, first two agents, stick.
+            HStack(alignment: .top, spacing: 10) {
+                DeckKnob(caption: knobCaption, action: cycleMode)
+                agentSlot(at: 0)
+                agentSlot(at: 1)
+                DeckJoystick(caption: "Control", action: onOpenControls)
+            }
+
+            // Row 2 — four more agent channels.
+            HStack(alignment: .top, spacing: 10) {
+                agentSlot(at: 2)
+                agentSlot(at: 3)
+                agentSlot(at: 4)
+                agentSlot(at: 5)
+            }
+
+            statusDisplay
+
+            // Row 3 — thin-line command keycaps.
+            HStack(alignment: .top, spacing: 10) {
+                commandKey(
+                    icon: "bolt",
+                    caption: "Stop",
+                    enabled: selectedAgent?.status == .thinking
+                ) {
+                    Task { await store.perform(.interrupt) }
+                }
+
+                commandKey(
+                    icon: "checkmark.circle",
+                    caption: approveLabel,
+                    enabled: selectedAgent?.status == .needsInput
+                ) {
+                    Task { await store.perform(.approve) }
+                }
+
+                commandKey(
+                    icon: "xmark.circle",
+                    caption: rejectLabel,
+                    enabled: selectedAgent?.status == .needsInput
+                ) {
+                    Task { await store.perform(.reject) }
+                }
+
+                commandKey(
+                    icon: "arrow.triangle.branch",
+                    caption: "Branch",
+                    enabled: selectedAgent?.capabilities.supportsBranch == true,
+                    action: onOpenBranch
+                )
+            }
+
+            // Row 4 — board details, wide mic bar, new-session key.
+            HStack(alignment: .center, spacing: 10) {
+                BoardDetailCluster()
+                    .frame(width: 58)
+
+                micBar
+
+                MatteKeycap(
+                    caption: "New",
+                    enabled: selectedAgent != nil,
+                    action: { Task { await store.perform(.newChat) } }
+                ) {
+                    CloudTerminalGlyph()
+                }
+                .frame(width: 76)
+                .accessibilityLabel("New chat")
+            }
+
+            promptConsole
+
+            Silkscreen(text: "Let’s build", size: 9, opacity: 0.65)
+                .padding(.top, 1)
+        }
+    }
+
+    // MARK: - Pieces
 
     @ViewBuilder
     private func agentSlot(at index: Int) -> some View {
         if store.agents.indices.contains(index) {
             let agent = store.agents[index]
-            AgentHardwareCap(
+            AgentSwitchKey(
                 agent: agent,
                 isSelected: store.selectedAgentID == agent.id,
-                action: { select(agent) }
+                action: { store.selectedAgentID = agent.id }
             )
         } else {
-            AddAgentCap(action: onOpenSettings)
+            EmptySwitchKey(action: onOpenSettings)
         }
+    }
+
+    private func commandKey(
+        icon: String,
+        caption: String,
+        enabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        MatteKeycap(caption: caption, enabled: enabled, action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 19, weight: .light))
+        }
+        .accessibilityLabel(caption)
+    }
+
+    /// Slim dark readout strip for the selected channel.
+    private var statusDisplay: some View {
+        HStack(spacing: 10) {
+            if let agent = selectedAgent {
+                DeckLED(color: agent.status.color, size: 8)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 7) {
+                        Text(agent.name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white)
+
+                        Text("\(agent.provider.shortLabel) · \(agent.model.uppercased()) · \(agent.effort.label.uppercased())")
+                            .font(.system(size: 7, weight: .medium, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.45))
+                            .lineLimit(1)
+                    }
+
+                    Text(agent.task)
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundStyle(.white.opacity(0.60))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 6)
+
+                Text(agent.status.label.uppercased())
+                    .font(.system(size: 7, weight: .semibold, design: .monospaced))
+                    .kerning(0.8)
+                    .foregroundStyle(agent.status.color)
+            } else {
+                Text("NO AGENT SELECTED")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .kerning(1)
+                    .foregroundStyle(.white.opacity(0.55))
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.horizontal, 13)
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .background {
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(white: 0.13), Color(white: 0.04)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .stroke(.white.opacity(0.16), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
+        }
+    }
+
+    private var micBar: some View {
+        MatteKeycap(
+            caption: recorder.isRecording ? "Listening…" : "Push to talk",
+            action: toggleRecording
+        ) {
+            Image(systemName: recorder.isRecording ? "waveform" : "mic")
+                .font(.system(size: 20, weight: .light))
+                .symbolEffect(.variableColor.iterative, isActive: recorder.isRecording)
+                .foregroundStyle(recorder.isRecording ? Color.pink : DeckTheme.ink)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityHint("Uses Apple speech recognition to fill the prompt")
+    }
+
+    private var promptConsole: some View {
+        HStack(spacing: 7) {
+            TextField("Prompt selected agent", text: $store.prompt)
+                .font(.system(size: 13, weight: .regular))
+                .submitLabel(.send)
+                .onSubmit(sendPrompt)
+
+            Button(action: sendPrompt) {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 31, height: 31)
+                    .background(DeckTheme.ink, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            .buttonStyle(TactileButtonStyle())
+            .disabled(trimmedPrompt.isEmpty)
+            .opacity(trimmedPrompt.isEmpty ? 0.35 : 1)
+            .accessibilityLabel("Send prompt")
+        }
+        .padding(.leading, 13)
+        .padding(.trailing, 6)
+        .frame(minHeight: 44)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.black.opacity(0.05))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(.white.opacity(0.8), lineWidth: 1)
+                }
+        }
+    }
+
+    // MARK: - Derived state & actions
+
+    private var trimmedPrompt: String {
+        store.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var knobCaption: String {
+        "Mode · \(selectedAgent?.mode.label ?? "—")"
+    }
+
+    private var approveLabel: String {
+        selectedAgent?.provider == .claudeCode ? "Allow" : "Approve"
+    }
+
+    private var rejectLabel: String {
+        selectedAgent?.provider == .claudeCode ? "Deny" : "Reject"
     }
 
     private var connectionColor: Color {
@@ -118,40 +303,12 @@ struct DeviceControlSurface: View {
         }
     }
 
-    private var approveLabel: String {
-        selectedAgent?.provider == .claudeCode ? "Allow" : "Approve"
-    }
-
-    private var rejectLabel: String {
-        selectedAgent?.provider == .claudeCode ? "Deny" : "Reject"
-    }
-
-    private func select(_ agent: Agent) {
-        store.selectedAgentID = agent.id
-    }
-
     private func cycleMode() {
         Task { await store.cycleMode() }
     }
 
-    private func interrupt() {
-        Task { await store.perform(.interrupt) }
-    }
-
-    private func reject() {
-        Task { await store.perform(.reject) }
-    }
-
-    private func approve() {
-        Task { await store.perform(.approve) }
-    }
-
-    private func newChat() {
-        Task { await store.perform(.newChat) }
-    }
-
     private func sendPrompt() {
-        let prompt = store.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prompt = trimmedPrompt
         guard !prompt.isEmpty else { return }
         Task { await store.perform(.prompt, text: prompt) }
     }
@@ -167,510 +324,144 @@ struct DeviceControlSurface: View {
     }
 }
 
-private struct DeviceMasthead: View {
-    let connectionLabel: String
-    let connectionColor: Color
-    let onSettings: () -> Void
+// MARK: - Cloud terminal glyph
 
+/// The cloud badge with a tiny prompt inside, from the bottom-right keycap.
+private struct CloudTerminalGlyph: View {
     var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(.black)
-                Image(systemName: "command")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 42, height: 42)
-            .shadow(color: .black.opacity(0.18), radius: 7, y: 4)
+        ZStack {
+            Image(systemName: "cloud")
+                .font(.system(size: 22, weight: .light))
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("AgentKeys")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .tracking(-0.5)
-                HStack(spacing: 6) {
-                    DeviceLED(color: connectionColor, size: 7)
-                    Text(connectionLabel.uppercased())
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .tracking(1.1)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer()
-
-            Button(action: onSettings) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 39, height: 39)
-                    .background(.white.opacity(0.76), in: Circle())
-                    .overlay { Circle().stroke(.white, lineWidth: 1) }
-                    .shadow(color: .black.opacity(0.11), radius: 5, y: 3)
-            }
-            .buttonStyle(TactileButtonStyle())
-            .accessibilityLabel("Connector settings")
+            Text("›_")
+                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                .offset(y: 1)
         }
-        .padding(.horizontal, 4)
+        .accessibilityHidden(true)
     }
 }
 
-private struct AcrylicDeviceShell<Content: View>: View {
-    let accent: Color
+// MARK: - Acrylic slab
+
+/// Frosted translucent chassis with an RGB glow ring bleeding out of the
+/// acrylic edge, corner screws, and vertical silkscreen legends.
+private struct AcrylicSlab<Content: View>: View {
+    var accent: Color?
     @ViewBuilder let content: Content
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     var body: some View {
         content
-            .padding(.horizontal, 16)
-            .padding(.top, 15)
-            .padding(.bottom, 13)
-            .background {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 33, style: .continuous)
+            .padding(.horizontal, 22)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
+            .background { chassis }
+    }
+
+    private var chassis: some View {
+        ZStack {
+            // RGB underglow escaping around the acrylic edge.
+            RoundedRectangle(cornerRadius: 36, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: glowColors,
+                        startPoint: .topTrailing,
+                        endPoint: .bottomLeading
+                    )
+                )
+                .padding(3)
+                .blur(radius: 16)
+                .offset(y: 9)
+                .opacity(reduceTransparency ? 0.35 : 0.75)
+
+            // Frosted acrylic body.
+            RoundedRectangle(cornerRadius: 34, style: .continuous)
+                .fill(
+                    reduceTransparency
+                        ? AnyShapeStyle(Color(red: 0.93, green: 0.94, blue: 0.95))
+                        : AnyShapeStyle(.ultraThinMaterial)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 34, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [.cyan.opacity(0.22), .mint.opacity(0.24), accent.opacity(0.20)],
-                                startPoint: .bottomLeading,
-                                endPoint: .bottomTrailing
+                                colors: [.white.opacity(0.72), .white.opacity(0.30)],
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
                         )
-                        .blur(radius: 9)
-                        .offset(y: 7)
-
-                    RoundedRectangle(cornerRadius: 31, style: .continuous)
-                        .fill(
-                            reduceTransparency
-                                ? AnyShapeStyle(Color(red: 0.91, green: 0.93, blue: 0.94))
-                                : AnyShapeStyle(.thinMaterial)
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 31, style: .continuous)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [.white.opacity(0.68), Color(red: 0.76, green: 0.82, blue: 0.84).opacity(0.24)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                        }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 31, style: .continuous)
-                                .stroke(.white.opacity(0.96), lineWidth: 1.5)
-                        }
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                .stroke(.black.opacity(0.08), lineWidth: 1)
-                                .padding(5)
-                        }
-                        .shadow(color: .black.opacity(0.15), radius: 17, y: 10)
-
-                    DeviceFasteners()
                 }
-            }
-    }
-}
+                .overlay {
+                    RoundedRectangle(cornerRadius: 34, style: .continuous)
+                        .stroke(
+                            colorSchemeContrast == .increased
+                                ? Color.primary.opacity(0.4)
+                                : Color.white.opacity(0.95),
+                            lineWidth: 1.25
+                        )
+                }
+                .overlay {
+                    // Inner plate seam.
+                    RoundedRectangle(cornerRadius: 27, style: .continuous)
+                        .stroke(.black.opacity(0.07), lineWidth: 1)
+                        .padding(7)
+                }
+                .shadow(color: .black.opacity(0.14), radius: 18, y: 12)
 
-private struct DeviceSilkscreen: View {
-    var body: some View {
-        HStack {
-            Text("AGENTKEYS  /  2026")
-            Spacer()
-            Image(systemName: "arrow.up")
-            Spacer()
-            Text("YOU CAN JUST BUILD THINGS")
+            edgeLegends
+            screws
         }
-        .font(.system(size: 6, weight: .semibold, design: .monospaced))
-        .tracking(0.45)
-        .foregroundStyle(.black.opacity(0.46))
-        .padding(.horizontal, 8)
     }
-}
 
-private struct DeviceFasteners: View {
-    var body: some View {
+    private var glowColors: [Color] {
+        if let accent, accent != AgentStatus.idle.color {
+            return [DeckTheme.glow[0], DeckTheme.glow[1], accent.opacity(0.9), DeckTheme.glow[3]]
+        }
+        return DeckTheme.glow
+    }
+
+    private var edgeLegends: some View {
+        ZStack {
+            Silkscreen(text: "AGENTKEYS  |  2026", size: 7)
+                .fixedSize()
+                .rotationEffect(.degrees(-90))
+                .frame(width: 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .padding(.leading, 3)
+
+            Silkscreen(text: "You can just build things", size: 7)
+                .fixedSize()
+                .rotationEffect(.degrees(90))
+                .frame(width: 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .padding(.trailing, 3)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private var screws: some View {
         VStack {
-            HStack { DeviceScrew(); Spacer(); DeviceScrew() }
+            HStack { DeckScrew(); Spacer(); DeckScrew() }
             Spacer()
-            HStack { DeviceScrew(); Spacer(); DeviceScrew() }
+            HStack { DeckScrew(); Spacer(); DeckScrew() }
         }
-        .padding(9)
+        .padding(13)
         .allowsHitTesting(false)
     }
 }
 
-private struct DeviceScrew: View {
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(LinearGradient(colors: [Color(white: 0.26), .black], startPoint: .topLeading, endPoint: .bottomTrailing))
-            Image(systemName: "hexagon.fill")
-                .font(.system(size: 5))
-                .foregroundStyle(.black)
-            Capsule()
-                .fill(.white.opacity(0.28))
-                .frame(width: 5, height: 1)
-                .rotationEffect(.degrees(-35))
-        }
-        .frame(width: 11, height: 11)
-        .shadow(color: .white.opacity(0.8), radius: 1, x: -1, y: -1)
-    }
-}
-
-private struct ModeKnob: View {
-    let value: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.16))
-                        .frame(width: 58, height: 58)
-                        .offset(y: 4)
-                    Circle()
-                        .fill(LinearGradient(colors: [.white, Color(white: 0.72)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 58, height: 58)
-                        .overlay { Circle().stroke(.white, lineWidth: 1) }
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(LinearGradient(colors: [Color(white: 0.98), Color(white: 0.58)], startPoint: .top, endPoint: .bottom))
-                        .frame(width: 14, height: 43)
-                        .offset(y: -7)
-                        .shadow(color: .black.opacity(0.18), radius: 2, y: 2)
-                }
-                Text(value.uppercased())
-                    .font(.system(size: 6, weight: .black, design: .monospaced))
-                    .tracking(0.4)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-            }
-            .frame(maxWidth: .infinity, minHeight: 84)
-        }
-        .buttonStyle(TactileButtonStyle())
-        .accessibilityLabel("Mode, \(value)")
-    }
-}
-
-private struct AdvancedDial: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 5) {
-                ZStack {
-                    Circle()
-                        .fill(.black.opacity(0.20))
-                        .frame(width: 58, height: 58)
-                        .offset(y: 4)
-                    Circle()
-                        .fill(RadialGradient(colors: [Color(white: 0.24), .black], center: .topLeading, startRadius: 1, endRadius: 31))
-                        .frame(width: 58, height: 58)
-                    ForEach(0..<8, id: \.self) { index in
-                        Capsule()
-                            .fill(.white.opacity(0.25))
-                            .frame(width: 2, height: 8)
-                            .offset(y: -22)
-                            .rotationEffect(.degrees(Double(index) * 45))
-                    }
-                    Image(systemName: "dial.medium")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.72))
-                }
-                Text("CONTROL")
-                    .font(.system(size: 6, weight: .black, design: .monospaced))
-                    .tracking(0.45)
-            }
-            .frame(maxWidth: .infinity, minHeight: 84)
-        }
-        .buttonStyle(TactileButtonStyle())
-        .accessibilityLabel("Agent controls")
-    }
-}
-
-private struct AgentHardwareCap: View {
-    let agent: Agent
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .fill(Color(white: 0.42).opacity(0.26))
-                    .offset(y: 5)
-
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .fill(agent.status.color.opacity(isSelected ? 0.28 : 0.17))
-                    .blur(radius: 7)
-
-                VStack(spacing: 4) {
-                    HStack {
-                        DeviceLED(color: agent.status.color, size: 6)
-                        Spacer()
-                        Image(systemName: agent.provider.systemImage)
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(.black.opacity(0.30))
-                    }
-
-                    ZStack {
-                        Circle()
-                            .fill(agent.status.color.opacity(0.19))
-                            .frame(width: 36, height: 36)
-                            .blur(radius: 3)
-                        Circle()
-                            .fill(.white.opacity(0.74))
-                            .frame(width: 31, height: 31)
-                            .overlay { Circle().stroke(agent.status.color.opacity(0.60), lineWidth: 1.5) }
-                        Image(agent.status.assetName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 23, height: 23)
-                    }
-
-                    Text(agent.name)
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-
-                    Text(agent.status.label.uppercased())
-                        .font(.system(size: 5.5, weight: .black, design: .monospaced))
-                        .tracking(0.4)
-                        .foregroundStyle(agent.status.color)
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 7)
-                .background {
-                    RoundedRectangle(cornerRadius: 17, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.white.opacity(0.76), agent.status.color.opacity(isSelected ? 0.24 : 0.11)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                                .stroke(isSelected ? agent.status.color.opacity(0.82) : .white.opacity(0.92), lineWidth: isSelected ? 1.5 : 1)
-                        }
-                        .overlay(alignment: .top) {
-                            RoundedRectangle(cornerRadius: 17, style: .continuous)
-                                .stroke(.white.opacity(0.82), lineWidth: 1)
-                        }
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: 84)
-        }
-        .buttonStyle(TactileButtonStyle())
-        .shadow(color: agent.status.color.opacity(isSelected ? 0.32 : 0.12), radius: isSelected ? 7 : 3, y: 3)
-        .accessibilityLabel("\(agent.name), \(agent.status.label), \(agent.task)")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-}
-
-private struct AddAgentCap: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .fill(.black.opacity(0.12))
-                    .offset(y: 5)
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .fill(.white.opacity(0.30))
-                    .overlay { RoundedRectangle(cornerRadius: 17).stroke(.white.opacity(0.65), lineWidth: 1) }
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .light))
-                    .foregroundStyle(.black.opacity(0.28))
-            }
-            .frame(maxWidth: .infinity, minHeight: 84)
-        }
-        .buttonStyle(TactileButtonStyle())
-        .accessibilityLabel("Add or connect an agent")
-    }
-}
-
-private struct DeviceCommandKey: View {
-    let title: String
-    let systemImage: String
-    let tint: Color
-    let enabled: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .fill(.black.opacity(0.16))
-                    .offset(y: 5)
-                VStack(spacing: 5) {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 17, weight: .medium))
-                    Text(title)
-                        .font(.system(size: 7, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                }
-                .foregroundStyle(tint)
-                .frame(maxWidth: .infinity, minHeight: 61)
-                .background {
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .fill(LinearGradient(colors: [.white, Color(white: 0.90)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .overlay { RoundedRectangle(cornerRadius: 15).stroke(.white, lineWidth: 1) }
-                }
-            }
-        }
-        .buttonStyle(TactileButtonStyle())
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.40)
-        .accessibilityLabel(title)
-    }
-}
-
-private struct SelectedAgentDisplay: View {
-    let agent: Agent?
-    let onBranch: () -> Void
-
-    var body: some View {
-        HStack(spacing: 10) {
-            if let agent {
-                DeviceLED(color: agent.status.color, size: 9)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(agent.name)
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                        Text("\(agent.provider.shortLabel) · \(agent.model.uppercased()) · \(agent.speed.label.uppercased()) · \(agent.effort.label.uppercased())")
-                            .font(.system(size: 6, weight: .black, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.40))
-                            .lineLimit(1)
-                    }
-                    Text(agent.task)
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.60))
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 4)
-
-                Button(action: onBranch) {
-                    Image(systemName: "arrow.triangle.branch")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.74))
-                        .frame(width: 32, height: 32)
-                        .background(.white.opacity(0.08), in: Circle())
-                }
-                .disabled(!agent.capabilities.supportsBranch)
-                .opacity(agent.capabilities.supportsBranch ? 1 : 0.35)
-                .accessibilityLabel("Branch or worktree")
-            } else {
-                Text("NO AGENT SELECTED")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.56))
-            }
-        }
-        .padding(.horizontal, 13)
-        .frame(maxWidth: .infinity, minHeight: 52)
-        .background {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(LinearGradient(colors: [Color(white: 0.11), Color(white: 0.035)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay { RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.15), lineWidth: 1) }
-                .shadow(color: .black.opacity(0.20), radius: 6, y: 4)
-        }
-    }
-}
-
-private struct PromptConsole: View {
-    @Binding var text: String
-    let isRecording: Bool
-    let onSend: () -> Void
-    let onVoice: () -> Void
-
-    private var trimmedText: String {
-        text.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 7) {
-                TextField("Prompt selected agent", text: $text)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .submitLabel(.send)
-                    .onSubmit(onSend)
-
-                Button(action: onSend) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 32, height: 32)
-                        .background(.black, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
-                .buttonStyle(TactileButtonStyle())
-                .disabled(trimmedText.isEmpty)
-                .opacity(trimmedText.isEmpty ? 0.36 : 1)
-                .accessibilityLabel("Send prompt")
-            }
-            .padding(.leading, 12)
-            .padding(.trailing, 5)
-            .frame(minHeight: 42)
-            .background(.black.opacity(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.72), lineWidth: 1) }
-
-            Button(action: onVoice) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 17, style: .continuous)
-                        .fill(.black.opacity(0.18))
-                        .offset(y: 5)
-                    HStack(spacing: 9) {
-                        Image(systemName: isRecording ? "waveform" : "mic.fill")
-                            .symbolEffect(.variableColor.iterative, isActive: isRecording)
-                        Text(isRecording ? "Listening…" : "Push to talk")
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                    }
-                    .foregroundStyle(isRecording ? Color.pink : Color.primary)
-                    .frame(maxWidth: .infinity, minHeight: 53)
-                    .background {
-                        RoundedRectangle(cornerRadius: 17, style: .continuous)
-                            .fill(LinearGradient(colors: [.white, Color(white: 0.90)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .overlay { RoundedRectangle(cornerRadius: 17).stroke(.white, lineWidth: 1) }
-                    }
-                }
-            }
-            .buttonStyle(TactileButtonStyle())
-            .accessibilityHint("Uses Apple speech recognition to fill the prompt")
-        }
-    }
-}
-
-private struct DeviceLED: View {
-    let color: Color
-    let size: CGFloat
-
-    var body: some View {
-        Circle()
-            .fill(color)
-            .frame(width: size, height: size)
-            .overlay(alignment: .topLeading) {
-                Circle()
-                    .fill(.white.opacity(0.84))
-                    .frame(width: size * 0.32, height: size * 0.32)
-                    .padding(size * 0.15)
-            }
-            .shadow(color: color.opacity(0.78), radius: size * 0.60)
-    }
-}
-
 #Preview("Virtual device") {
-    DeviceControlSurface(
-        store: AgentStore(),
-        recorder: SpeechPromptRecorder(),
-        onOpenControls: {},
-        onOpenBranch: {},
-        onOpenSettings: {}
-    )
-    .padding()
-    .background(Color(red: 0.925, green: 0.935, blue: 0.95))
+    ScrollView {
+        DeviceControlSurface(
+            store: AgentStore(),
+            recorder: SpeechPromptRecorder(),
+            onOpenControls: {},
+            onOpenBranch: {},
+            onOpenSettings: {}
+        )
+        .padding(16)
+    }
+    .background(DeckTheme.studio)
 }
