@@ -139,7 +139,7 @@ struct DeviceControlSurface: View {
 
             promptConsole
 
-            Silkscreen(text: "Let’s build", size: 9, opacity: 0.65)
+            Silkscreen(text: "Let’s build", size: 11, opacity: 0.7)
                 .padding(.top, 1)
         }
     }
@@ -182,30 +182,30 @@ struct DeviceControlSurface: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 7) {
                         Text(agent.name)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
 
                         Text("\(agent.provider.shortLabel) · \(agent.model.uppercased()) · \(agent.effort.label.uppercased())")
-                            .font(.system(size: 7, weight: .medium, design: .monospaced))
+                            .font(.system(size: 8, weight: .medium, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.45))
                             .lineLimit(1)
                     }
 
                     Text(agent.task)
-                        .font(.system(size: 10, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.60))
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(.white.opacity(0.62))
                         .lineLimit(1)
                 }
 
                 Spacer(minLength: 6)
 
                 Text(agent.status.label.uppercased())
-                    .font(.system(size: 7, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
                     .kerning(0.8)
                     .foregroundStyle(agent.status.color)
             } else {
                 Text("NO AGENT SELECTED")
-                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .kerning(1)
                     .foregroundStyle(.white.opacity(0.55))
                     .frame(maxWidth: .infinity)
@@ -267,11 +267,19 @@ struct DeviceControlSurface: View {
         .padding(.trailing, 6)
         .frame(minHeight: 44)
         .background {
+            // Recessed well: shaded top edge, bright bottom lip.
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.black.opacity(0.05))
+                .fill(.white.opacity(0.55))
                 .overlay {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(.white.opacity(0.8), lineWidth: 1)
+                        .stroke(
+                            LinearGradient(
+                                colors: [.black.opacity(0.10), .white.opacity(0.9)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            ),
+                            lineWidth: 1
+                        )
                 }
         }
     }
@@ -361,7 +369,8 @@ private struct AcrylicSlab<Content: View>: View {
 
     private var chassis: some View {
         ZStack {
-            // RGB underglow escaping around the acrylic edge.
+            // RGB underglow escaping around the acrylic edge: a wide floor
+            // bloom plus a tight saturated rim hugging the chassis.
             RoundedRectangle(cornerRadius: 36, style: .continuous)
                 .fill(
                     LinearGradient(
@@ -371,9 +380,22 @@ private struct AcrylicSlab<Content: View>: View {
                     )
                 )
                 .padding(3)
-                .blur(radius: 16)
-                .offset(y: 9)
-                .opacity(reduceTransparency ? 0.35 : 0.75)
+                .blur(radius: 18)
+                .offset(y: 10)
+                .opacity(reduceTransparency ? 0.35 : 0.8)
+
+            RoundedRectangle(cornerRadius: 35, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: glowColors,
+                        startPoint: .topTrailing,
+                        endPoint: .bottomLeading
+                    ),
+                    lineWidth: 5
+                )
+                .padding(1)
+                .blur(radius: 5)
+                .opacity(reduceTransparency ? 0.25 : 0.55)
 
             // Frosted acrylic body.
             RoundedRectangle(cornerRadius: 34, style: .continuous)
@@ -423,17 +445,17 @@ private struct AcrylicSlab<Content: View>: View {
 
     private var edgeLegends: some View {
         ZStack {
-            Silkscreen(text: "AGENTKEYS  |  2026", size: 7)
+            Silkscreen(text: "AGENTKEYS  |  2026", size: 8.5)
                 .fixedSize()
                 .rotationEffect(.degrees(-90))
-                .frame(width: 12)
+                .frame(width: 13)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .padding(.leading, 3)
 
-            Silkscreen(text: "You can just build things", size: 7)
+            Silkscreen(text: "You can just build things", size: 8.5)
                 .fixedSize()
                 .rotationEffect(.degrees(90))
-                .frame(width: 12)
+                .frame(width: 13)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                 .padding(.trailing, 3)
         }

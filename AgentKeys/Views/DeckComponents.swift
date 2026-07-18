@@ -7,25 +7,28 @@ enum DeckTheme {
     static let studio = Color(red: 0.956, green: 0.960, blue: 0.968)
 
     /// Printed-legend ink used for silkscreen text on the plate.
-    static let silkscreen = Color(red: 0.38, green: 0.40, blue: 0.44)
+    static let silkscreen = Color(red: 0.36, green: 0.38, blue: 0.42)
 
     /// Thin-line icon ink on matte keycaps.
     static let ink = Color(red: 0.13, green: 0.14, blue: 0.17)
 
     /// Matte keycap surface.
-    static let capTop = Color(white: 0.995)
-    static let capBottom = Color(red: 0.905, green: 0.915, blue: 0.935)
+    static let capTop = Color(white: 0.998)
+    static let capBottom = Color(red: 0.885, green: 0.895, blue: 0.915)
 
     /// Dark switch housing that peeks out under every cap.
-    static let housing = Color(red: 0.12, green: 0.12, blue: 0.14)
+    static let housing = Color(red: 0.10, green: 0.10, blue: 0.12)
+
+    /// Warm-white LED used by idle channels, so every populated key reads lit.
+    static let idleGlow = Color(red: 0.93, green: 0.95, blue: 1.0)
 
     /// RGB underglow ring, sampled from the acrylic edge in the reference shots.
     static let glow: [Color] = [
-        Color(red: 0.40, green: 0.93, blue: 0.72),
-        Color(red: 0.45, green: 0.86, blue: 0.98),
-        Color(red: 0.55, green: 0.66, blue: 1.00),
-        Color(red: 0.80, green: 0.72, blue: 1.00),
-        Color(red: 0.42, green: 0.92, blue: 0.80)
+        Color(red: 0.33, green: 0.94, blue: 0.70),
+        Color(red: 0.40, green: 0.85, blue: 0.99),
+        Color(red: 0.50, green: 0.62, blue: 1.00),
+        Color(red: 0.83, green: 0.70, blue: 1.00),
+        Color(red: 0.36, green: 0.93, blue: 0.78)
     ]
 }
 
@@ -51,13 +54,13 @@ struct TactileButtonStyle: ButtonStyle {
 
 struct Silkscreen: View {
     let text: String
-    var size: CGFloat = 7.5
-    var opacity: Double = 0.85
+    var size: CGFloat = 9
+    var opacity: Double = 0.9
 
     var body: some View {
         Text(text)
             .font(.system(size: size, weight: .medium))
-            .kerning(0.7)
+            .kerning(0.9)
             .foregroundStyle(DeckTheme.silkscreen.opacity(opacity))
             .lineLimit(1)
             .minimumScaleFactor(0.7)
@@ -72,22 +75,22 @@ struct DeckScrew: View {
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [Color(white: 0.30), Color(white: 0.06)],
+                        colors: [Color(white: 0.32), Color(white: 0.05)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
 
             Image(systemName: "hexagon.fill")
-                .font(.system(size: 4.5))
+                .font(.system(size: 5))
                 .foregroundStyle(.black.opacity(0.9))
 
             Capsule()
-                .fill(.white.opacity(0.25))
-                .frame(width: 4, height: 1)
+                .fill(.white.opacity(0.28))
+                .frame(width: 4.5, height: 1)
                 .rotationEffect(.degrees(-40))
         }
-        .frame(width: 10, height: 10)
+        .frame(width: 11, height: 11)
         .shadow(color: .white.opacity(0.9), radius: 1, x: -0.5, y: -0.5)
         .accessibilityHidden(true)
     }
@@ -114,21 +117,29 @@ struct DeckLED: View {
 /// The tiny SMD LED cluster and reset port from the bottom-left of the board.
 struct BoardDetailCluster: View {
     var body: some View {
-        HStack(spacing: 7) {
-            VStack(alignment: .leading, spacing: 2.5) {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
                 SMDLed(tint: .white)
                 SMDLed(tint: Color(red: 1.0, green: 0.84, blue: 0.35))
                 SMDLed(tint: Color(red: 1.0, green: 0.84, blue: 0.35))
             }
 
-            Circle()
-                .fill(Color.black)
-                .frame(width: 21, height: 21)
-                .overlay {
-                    Circle()
-                        .stroke(.white.opacity(0.55), lineWidth: 1)
-                        .padding(-3)
-                }
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color(white: 0.16), .black],
+                            center: .topLeading,
+                            startRadius: 1,
+                            endRadius: 16
+                        )
+                    )
+                    .frame(width: 22, height: 22)
+
+                Circle()
+                    .stroke(.white.opacity(0.6), lineWidth: 1)
+                    .frame(width: 28, height: 28)
+            }
         }
         .accessibilityHidden(true)
     }
@@ -145,7 +156,7 @@ struct BoardDetailCluster: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 5, height: 3.5)
+                .frame(width: 6, height: 4)
                 .overlay {
                     RoundedRectangle(cornerRadius: 1, style: .continuous)
                         .stroke(.black.opacity(0.25), lineWidth: 0.5)
@@ -161,17 +172,17 @@ struct BoardDetailCluster: View {
 struct MatteKeycap<Icon: View>: View {
     var caption: String? = nil
     var enabled: Bool = true
-    var height: CGFloat = 62
+    var height: CGFloat = 64
     let action: () -> Void
     @ViewBuilder let icon: Icon
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 9) {
+            VStack(spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .fill(DeckTheme.housing)
-                        .padding(.horizontal, 7)
+                        .padding(.horizontal, 8)
                         .frame(height: height)
                         .offset(y: 6)
 
@@ -179,7 +190,7 @@ struct MatteKeycap<Icon: View>: View {
                 }
 
                 if let caption {
-                    Silkscreen(text: caption, size: 6.5)
+                    Silkscreen(text: caption, size: 8)
                 }
             }
         }
@@ -189,11 +200,11 @@ struct MatteKeycap<Icon: View>: View {
 
     private var capFace: some View {
         icon
-            .foregroundStyle(DeckTheme.ink.opacity(enabled ? 1 : 0.30))
+            .foregroundStyle(DeckTheme.ink.opacity(enabled ? 1 : 0.28))
             .frame(maxWidth: .infinity)
             .frame(height: height)
             .background {
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [DeckTheme.capTop, DeckTheme.capBottom],
@@ -206,19 +217,32 @@ struct MatteKeycap<Icon: View>: View {
                         Circle()
                             .fill(
                                 RadialGradient(
-                                    colors: [.white.opacity(0.9), .white.opacity(0)],
-                                    center: .center,
+                                    colors: [.white, .white.opacity(0)],
+                                    center: .init(x: 0.5, y: 0.42),
                                     startRadius: 1,
-                                    endRadius: height * 0.42
+                                    endRadius: height * 0.46
                                 )
                             )
-                            .padding(6)
+                            .padding(5)
+
+                        Circle()
+                            .stroke(.black.opacity(0.045), lineWidth: 1)
+                            .padding(9)
                     }
                     .overlay {
-                        RoundedRectangle(cornerRadius: 15, style: .continuous)
-                            .stroke(.white.opacity(0.95), lineWidth: 1)
+                        // Crisp top light, soft shaded bottom lip.
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.white, .white.opacity(0.35), .black.opacity(0.10)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 1
+                            )
                     }
-                    .shadow(color: .black.opacity(0.14), radius: 4, y: 4)
+                    .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+                    .shadow(color: .black.opacity(0.10), radius: 6, y: 5)
             }
     }
 }
@@ -226,36 +250,50 @@ struct MatteKeycap<Icon: View>: View {
 // MARK: - Translucent agent switch key
 
 /// A clear, RGB-backlit switch key — the exposed MX-style switch look from the
-/// top rows of the reference device. The LED color is the agent status.
+/// top rows of the reference device. The LED color is the agent status; idle
+/// channels glow warm white so every populated key reads as powered.
 struct AgentSwitchKey: View {
     let agent: Agent
     let isSelected: Bool
     let action: () -> Void
 
-    private var lit: Bool { agent.status != .idle }
-    private var glow: Color { agent.status.color }
+    private var glow: Color {
+        agent.status == .idle ? DeckTheme.idleGlow : agent.status.color
+    }
+
+    private var bloom: Double {
+        if isSelected { return 1.0 }
+        return agent.status == .idle ? 0.55 : 0.8
+    }
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 9) {
+            VStack(spacing: 10) {
                 ZStack {
+                    // Color-stained housing under the clear cap.
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(DeckTheme.housing)
-                        .padding(.horizontal, 6)
-                        .frame(height: 64)
+                        .fill(
+                            LinearGradient(
+                                colors: [glow.opacity(0.55), Color.black.opacity(0.92)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .padding(.horizontal, 7)
+                        .frame(height: 66)
                         .offset(y: 6)
 
-                    // LED shining through the frosted cap.
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    // LED bloom escaping around the cap.
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(glow)
-                        .frame(height: 64)
-                        .blur(radius: 12)
-                        .opacity(lit ? (isSelected ? 0.85 : 0.55) : 0.14)
+                        .frame(height: 66)
+                        .blur(radius: 13)
+                        .opacity(0.45 * bloom)
 
                     capFace
                 }
 
-                Silkscreen(text: agent.name.uppercased(), size: 6.5)
+                Silkscreen(text: agent.name.uppercased(), size: 8)
             }
         }
         .buttonStyle(TactileButtonStyle())
@@ -265,90 +303,102 @@ struct AgentSwitchKey: View {
 
     private var capFace: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .fill(.white.opacity(0.34))
-                .background {
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .fill(glow.opacity(lit ? 0.30 : 0.05))
-                }
+            // Frosted cap body.
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.white.opacity(0.42))
+
+            // The LED sits under the stem: a tight radial bloom, not a fill.
+            RadialGradient(
+                colors: [
+                    glow.opacity(0.95 * bloom),
+                    glow.opacity(0.35 * bloom),
+                    glow.opacity(0.06)
+                ],
+                center: .center,
+                startRadius: 2,
+                endRadius: 46
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
             // Inner clear-cap wall.
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(.white.opacity(0.70), lineWidth: 1)
-                .padding(9)
+                .stroke(.white.opacity(0.78), lineWidth: 1)
+                .padding(10)
 
-            SwitchStem(tint: stemTint)
+            SwitchStem(tint: Color(red: 0.27, green: 0.30, blue: 0.46))
+
+            // Diagonal specular sheen across the acrylic.
+            LinearGradient(
+                colors: [.white.opacity(0.55), .white.opacity(0.0), .white.opacity(0.14)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .allowsHitTesting(false)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(
-                    isSelected ? glow.opacity(0.9) : .white.opacity(0.85),
+                    isSelected ? glow.opacity(0.95) : .white.opacity(0.9),
                     lineWidth: isSelected ? 1.5 : 1
                 )
         }
-        .frame(height: 64)
-        .shadow(color: glow.opacity(lit ? (isSelected ? 0.55 : 0.30) : 0.06), radius: 9, y: 3)
-    }
-
-    private var stemTint: Color {
-        lit ? Color(red: 0.30, green: 0.33, blue: 0.48) : Color(white: 0.55)
+        .frame(height: 66)
+        .shadow(color: glow.opacity(0.35 * bloom), radius: 10, y: 3)
     }
 }
 
 /// The cross-shaped MX switch stem visible through the clear cap.
 struct SwitchStem: View {
-    var tint: Color = Color(red: 0.30, green: 0.33, blue: 0.48)
+    var tint: Color = Color(red: 0.27, green: 0.30, blue: 0.46)
 
     var body: some View {
         ZStack {
             Circle()
-                .fill(tint.opacity(0.30))
-                .frame(width: 20, height: 20)
+                .fill(tint.opacity(0.26))
+                .frame(width: 24, height: 24)
+
+            Circle()
+                .stroke(tint.opacity(0.4), lineWidth: 1)
+                .frame(width: 24, height: 24)
 
             Capsule()
                 .fill(tint)
-                .frame(width: 13, height: 3.5)
+                .frame(width: 15, height: 4)
 
             Capsule()
                 .fill(tint)
-                .frame(width: 3.5, height: 13)
+                .frame(width: 4, height: 15)
         }
         .accessibilityHidden(true)
     }
 }
 
-/// An unlit clear key for an empty agent slot.
+/// A vacant socket: no switch installed, just the dashed mount outline and
+/// bare contacts, so it cannot be mistaken for an idle (powered) channel.
 struct EmptySwitchKey: View {
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 9) {
+            VStack(spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .fill(DeckTheme.housing.opacity(0.55))
-                        .padding(.horizontal, 6)
-                        .frame(height: 64)
-                        .offset(y: 6)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(.black.opacity(0.03))
 
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 15, style: .continuous)
-                            .fill(.white.opacity(0.22))
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(
+                            DeckTheme.silkscreen.opacity(0.45),
+                            style: StrokeStyle(lineWidth: 1, dash: [4, 3])
+                        )
 
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(.white.opacity(0.5), lineWidth: 1)
-                            .padding(9)
-
-                        SwitchStem(tint: Color(white: 0.68))
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 15, style: .continuous)
-                            .stroke(.white.opacity(0.6), lineWidth: 1)
-                    }
-                    .frame(height: 64)
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .light))
+                        .foregroundStyle(DeckTheme.silkscreen.opacity(0.55))
                 }
+                .frame(height: 66)
 
-                Silkscreen(text: "— — —", size: 6.5, opacity: 0.45)
+                Silkscreen(text: "ADD", size: 8, opacity: 0.5)
             }
         }
         .buttonStyle(TactileButtonStyle())
@@ -358,48 +408,90 @@ struct EmptySwitchKey: View {
 
 // MARK: - Knob
 
-/// The white rotary knob with the machined flat cut, top-left on the device.
+/// Pie-slice wedge scooped out of the knob face.
+private struct KnobWedge: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        path.move(to: center)
+        path.addArc(
+            center: center,
+            radius: rect.width / 2,
+            startAngle: .degrees(-114),
+            endAngle: .degrees(-36),
+            clockwise: false
+        )
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// The white rotary knob with the machined scoop cut, top-left on the device.
 struct DeckKnob: View {
     let caption: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 9) {
+            VStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(.black.opacity(0.18))
-                        .frame(width: 60, height: 60)
+                        .fill(.black.opacity(0.20))
+                        .frame(width: 64, height: 64)
                         .offset(y: 4)
-                        .blur(radius: 2)
+                        .blur(radius: 3)
 
+                    // Knob body.
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [.white, Color(white: 0.84)],
+                                colors: [.white, Color(white: 0.82)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 60, height: 60)
-                        .overlay { Circle().stroke(.white, lineWidth: 1) }
+                        .frame(width: 64, height: 64)
 
-                    // Machined diagonal cut across the knob face.
-                    Capsule()
-                        .fill(Color(white: 0.78))
-                        .frame(width: 52, height: 1.5)
-                        .rotationEffect(.degrees(-45))
-                        .mask(Circle().frame(width: 58, height: 58))
+                    // Machined scoop: shaded wedge with a bright leading edge.
+                    KnobWedge()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(white: 0.68), Color(white: 0.90)],
+                                startPoint: .bottom,
+                                endPoint: .top
+                            )
+                        )
+                        .frame(width: 64, height: 64)
+                        .clipShape(Circle())
 
-                    Capsule()
-                        .fill(Color(white: 0.60))
-                        .frame(width: 2.5, height: 14)
-                        .offset(y: -17)
-                        .rotationEffect(.degrees(38))
+                    KnobWedge()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white, Color(white: 0.60)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.25
+                        )
+                        .frame(width: 64, height: 64)
+                        .clipShape(Circle())
+
+                    // Rim highlight.
+                    Circle()
+                        .stroke(
+                            LinearGradient(
+                                colors: [.white, Color(white: 0.70)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.25
+                        )
+                        .frame(width: 64, height: 64)
                 }
-                .frame(height: 70)
+                .frame(height: 72)
+                .rotationEffect(.degrees(24))
 
-                Silkscreen(text: caption.uppercased(), size: 6.5)
+                Silkscreen(text: caption.uppercased(), size: 8)
             }
             .frame(maxWidth: .infinity)
         }
@@ -409,55 +501,137 @@ struct DeckKnob: View {
 
 // MARK: - Joystick
 
-/// The black four-way hat switch, top-right on the device.
+private struct Octagon: Shape {
+    func path(in rect: CGRect) -> Path {
+        let width = rect.width
+        let inset = width * 0.29
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + inset, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX - inset, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + inset))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - inset))
+        path.addLine(to: CGPoint(x: rect.maxX - inset, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX + inset, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - inset))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + inset))
+        path.closeSubpath()
+        return path
+    }
+}
+
+/// The black four-way hat switch on its metal mount, top-right on the device.
 struct DeckJoystick: View {
     let caption: String
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 9) {
+            VStack(spacing: 10) {
                 ZStack {
-                    // Dashed silkscreen outline around the mount.
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    // Dashed silkscreen outline around the module.
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
                         .stroke(
-                            DeckTheme.silkscreen.opacity(0.55),
-                            style: StrokeStyle(lineWidth: 1, dash: [3, 2.5])
+                            DeckTheme.silkscreen.opacity(0.5),
+                            style: StrokeStyle(lineWidth: 1, dash: [3.5, 3])
                         )
-                        .frame(width: 62, height: 62)
+                        .frame(width: 68, height: 68)
 
-                    Circle()
-                        .fill(.black.opacity(0.30))
-                        .frame(width: 50, height: 50)
-                        .offset(y: 3)
-                        .blur(radius: 2)
-
-                    Circle()
+                    // Brushed metal mount plate.
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .fill(
-                            RadialGradient(
-                                colors: [Color(white: 0.28), .black],
-                                center: .topLeading,
-                                startRadius: 2,
-                                endRadius: 34
+                            LinearGradient(
+                                colors: [Color(white: 0.88), Color(white: 0.64)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 50, height: 50)
+                        .frame(width: 58, height: 58)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .stroke(.white.opacity(0.8), lineWidth: 0.75)
+                        }
+                        .overlay { mountScrews }
 
-                    // Four-way cross indents on the stick cap.
+                    // Rubber hat: octagonal cap with a deep X-shaped groove.
+                    Octagon()
+                        .fill(.black.opacity(0.35))
+                        .frame(width: 47, height: 47)
+                        .offset(y: 2.5)
+                        .blur(radius: 2)
+
+                    Octagon()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color(white: 0.30), Color(white: 0.05)],
+                                center: .init(x: 0.35, y: 0.3),
+                                startRadius: 2,
+                                endRadius: 32
+                            )
+                        )
+                        .frame(width: 47, height: 47)
+                        .overlay {
+                            Octagon()
+                                .stroke(.white.opacity(0.16), lineWidth: 0.75)
+                        }
+
+                    // X-groove with a soft highlight below each arm.
                     ForEach(0..<4, id: \.self) { index in
-                        Capsule()
-                            .fill(.black.opacity(0.85))
-                            .frame(width: 3, height: 9)
-                            .offset(y: -12)
-                            .rotationEffect(.degrees(Double(index) * 90 + 45))
-                    }
-                }
-                .frame(height: 70)
+                        ZStack {
+                            Capsule()
+                                .fill(.white.opacity(0.10))
+                                .frame(width: 4.5, height: 13)
+                                .offset(x: 1, y: -10.5)
 
-                Silkscreen(text: caption.uppercased(), size: 6.5)
+                            Capsule()
+                                .fill(.black)
+                                .frame(width: 4, height: 13)
+                                .offset(y: -11)
+                        }
+                        .rotationEffect(.degrees(Double(index) * 90 + 45))
+                    }
+
+                    Circle()
+                        .fill(.black)
+                        .frame(width: 7, height: 7)
+                }
+                .frame(height: 72)
+
+                Silkscreen(text: caption.uppercased(), size: 8)
             }
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(TactileButtonStyle())
+    }
+
+    private var mountScrews: some View {
+        VStack {
+            HStack {
+                MountScrew()
+                Spacer()
+                MountScrew()
+            }
+            Spacer()
+            HStack {
+                MountScrew()
+                Spacer()
+                MountScrew()
+            }
+        }
+        .padding(3.5)
+    }
+
+    private struct MountScrew: View {
+        var body: some View {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color(white: 0.55), Color(white: 0.25)],
+                        center: .topLeading,
+                        startRadius: 0,
+                        endRadius: 3
+                    )
+                )
+                .frame(width: 4, height: 4)
+        }
     }
 }
