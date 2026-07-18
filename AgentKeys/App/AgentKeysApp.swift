@@ -26,7 +26,12 @@ struct AgentKeysApp: App {
                 }
             }
             .animation(.easeInOut(duration: 0.22), value: hasCompletedOnboarding)
-                .preferredColorScheme(.light)
+            .preferredColorScheme(.light)
+            .onOpenURL { url in
+                guard let configuration = PairingLink.parse(url) else { return }
+                store.apply(pairing: configuration)
+                hasCompletedOnboarding = true
+            }
         }
     }
 

@@ -22,7 +22,11 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: AgentKeys connects to the companion running on your Mac.
+        NSCameraUsageDescription: AgentKeys uses the camera only to scan the pairing QR code shown by the Mac connector.
         NSMicrophoneUsageDescription: AgentKeys uses the microphone only while you hold push-to-talk.
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.agentkeys.pairing
+            CFBundleURLSchemes: [agentkeys]
         NSSpeechRecognitionUsageDescription: AgentKeys turns your voice into prompts on device.
         UILaunchScreen: {}
     settings:

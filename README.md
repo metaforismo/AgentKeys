@@ -30,6 +30,7 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 - Three-page first-run introduction with instant demo and Mac-connector paths.
 - Five visually distinct agent states: `idle`, `thinking`, `complete`, `needs_input`, and `error`.
 - Live status polling through a small, documented local protocol.
+- One-scan pairing: the companion prints an `agentkeys://` QR code, the app stores the token in the Keychain and reconnects automatically.
 - Semantic action queue: `approve`, `reject`, `interrupt`, `new_chat`, and `prompt`.
 - Capability-driven Codex and Claude Code profiles with provider-specific modes.
 - Tactile workflow pad for PR review, debugging, refactoring, and focused tests.
@@ -97,18 +98,18 @@ The reference companion requires Node.js 20 or newer. Install the locked depende
 cd connector
 npm ci
 npm test
-AGENTKEYS_PHONE_TOKEN='replace-with-a-long-random-token' \
-AGENTKEYS_INTEGRATION_TOKEN='replace-with-a-different-long-random-token' \
 node src/cli.mjs --demo
 ```
 
-It listens on loopback by default. To connect an iPhone through a private Tailscale network, bind to the Mac's Tailscale address explicitly:
+Tokens are generated on first run and persisted with `0600` permissions in `~/.agentkeys/credentials.json`, so restarting the companion never breaks an existing pairing. Set `AGENTKEYS_PHONE_TOKEN` and `AGENTKEYS_INTEGRATION_TOKEN` to override them.
+
+The companion listens on loopback by default. To connect an iPhone through a private Tailscale network, bind to the Mac's Tailscale address explicitly:
 
 ```sh
 node src/cli.mjs --host 100.x.y.z --allow-network
 ```
 
-Enter the transport, host, port, and printed phone token in AgentKeys settings. Use **Local HTTP** only for loopback or a private encrypted tunnel. Select **HTTPS** when the companion is behind a TLS endpoint. Never expose port `7777` directly to the public internet.
+When reachable beyond loopback it prints an `agentkeys://pair` link and a QR code. Pair the phone by scanning the QR from **AgentKeys → settings → Scan pairing QR** (or by opening the link on the phone); the pairing is stored in the iOS Keychain and reconnects automatically on the next launch. Manual entry of transport, host, port, and token remains available. Use **Local HTTP** only for loopback or a private encrypted tunnel. Select **HTTPS** when the companion is behind a TLS endpoint. Never expose port `7777` directly to the public internet.
 
 ## Connect Codex
 

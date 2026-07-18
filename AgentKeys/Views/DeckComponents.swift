@@ -213,7 +213,8 @@ struct MatteKeycap<Icon: View>: View {
                         )
                     )
                     .overlay {
-                        // Circular finger dish pressed into the cap.
+                        // Soft finger dish pressed into the cap — highlight
+                        // only, no printed ring.
                         Circle()
                             .fill(
                                 RadialGradient(
@@ -224,10 +225,6 @@ struct MatteKeycap<Icon: View>: View {
                                 )
                             )
                             .padding(5)
-
-                        Circle()
-                            .stroke(.black.opacity(0.045), lineWidth: 1)
-                            .padding(9)
                     }
                     .overlay {
                         // Crisp top light, soft shaded bottom lip.
@@ -436,60 +433,59 @@ struct DeckKnob: View {
             VStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(.black.opacity(0.20))
+                        .fill(.black.opacity(0.22))
                         .frame(width: 64, height: 64)
                         .offset(y: 4)
                         .blur(radius: 3)
 
-                    // Knob body.
+                    // Cylinder side wall.
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [.white, Color(white: 0.82)],
+                                colors: [.white, Color(white: 0.74)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 64, height: 64)
 
-                    // Machined scoop: shaded wedge with a bright leading edge.
-                    KnobWedge()
+                    // Top face, inset from the wall so the rim reads as depth.
+                    Circle()
                         .fill(
-                            LinearGradient(
-                                colors: [Color(white: 0.68), Color(white: 0.90)],
-                                startPoint: .bottom,
-                                endPoint: .top
+                            RadialGradient(
+                                colors: [.white, Color(white: 0.88)],
+                                center: .init(x: 0.35, y: 0.3),
+                                startRadius: 2,
+                                endRadius: 40
                             )
                         )
-                        .frame(width: 64, height: 64)
-                        .clipShape(Circle())
+                        .frame(width: 56, height: 56)
 
-                    KnobWedge()
-                        .stroke(
-                            LinearGradient(
-                                colors: [.white, Color(white: 0.60)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.25
-                        )
-                        .frame(width: 64, height: 64)
-                        .clipShape(Circle())
+                    // Machined scoop cut into the top face: shaded floor,
+                    // dark inner edge, bright outer lip.
+                    ZStack {
+                        KnobWedge()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(white: 0.66), Color(white: 0.84)],
+                                    startPoint: .init(x: 0.5, y: 0.5),
+                                    endPoint: .init(x: 0.5, y: 0.0)
+                                )
+                            )
 
-                    // Rim highlight.
-                    Circle()
-                        .stroke(
-                            LinearGradient(
-                                colors: [.white, Color(white: 0.70)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.25
-                        )
-                        .frame(width: 64, height: 64)
+                        KnobWedge()
+                            .stroke(Color(white: 0.55).opacity(0.85), lineWidth: 1)
+
+                        KnobWedge()
+                            .stroke(.white.opacity(0.9), lineWidth: 1)
+                            .offset(y: 1)
+                            .blendMode(.screen)
+                    }
+                    .frame(width: 56, height: 56)
+                    .clipShape(Circle())
+                    .rotationEffect(.degrees(26))
                 }
                 .frame(height: 72)
-                .rotationEffect(.degrees(24))
 
                 Silkscreen(text: caption.uppercased(), size: 8)
             }
@@ -540,7 +536,7 @@ struct DeckJoystick: View {
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [Color(white: 0.88), Color(white: 0.64)],
+                                colors: [Color(white: 0.94), Color(white: 0.76)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -548,51 +544,51 @@ struct DeckJoystick: View {
                         .frame(width: 58, height: 58)
                         .overlay {
                             RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                .stroke(.white.opacity(0.8), lineWidth: 0.75)
+                                .stroke(.white.opacity(0.9), lineWidth: 0.75)
                         }
                         .overlay { mountScrews }
 
-                    // Rubber hat: octagonal cap with a deep X-shaped groove.
+                    // Rubber hat: octagonal cap with a fine X-shaped groove.
                     Octagon()
                         .fill(.black.opacity(0.35))
-                        .frame(width: 47, height: 47)
+                        .frame(width: 42, height: 42)
                         .offset(y: 2.5)
                         .blur(radius: 2)
 
                     Octagon()
                         .fill(
                             RadialGradient(
-                                colors: [Color(white: 0.30), Color(white: 0.05)],
+                                colors: [Color(white: 0.34), Color(white: 0.06)],
                                 center: .init(x: 0.35, y: 0.3),
                                 startRadius: 2,
-                                endRadius: 32
+                                endRadius: 29
                             )
                         )
-                        .frame(width: 47, height: 47)
+                        .frame(width: 42, height: 42)
                         .overlay {
                             Octagon()
-                                .stroke(.white.opacity(0.16), lineWidth: 0.75)
+                                .stroke(.white.opacity(0.22), lineWidth: 0.75)
                         }
 
-                    // X-groove with a soft highlight below each arm.
+                    // Fine engraved X-groove.
                     ForEach(0..<4, id: \.self) { index in
                         ZStack {
                             Capsule()
-                                .fill(.white.opacity(0.10))
-                                .frame(width: 4.5, height: 13)
-                                .offset(x: 1, y: -10.5)
+                                .fill(.white.opacity(0.14))
+                                .frame(width: 3, height: 10)
+                                .offset(x: 0.8, y: -9.2)
 
                             Capsule()
-                                .fill(.black)
-                                .frame(width: 4, height: 13)
-                                .offset(y: -11)
+                                .fill(.black.opacity(0.9))
+                                .frame(width: 2.5, height: 10)
+                                .offset(y: -9.5)
                         }
                         .rotationEffect(.degrees(Double(index) * 90 + 45))
                     }
 
                     Circle()
-                        .fill(.black)
-                        .frame(width: 7, height: 7)
+                        .fill(.black.opacity(0.85))
+                        .frame(width: 5, height: 5)
                 }
                 .frame(height: 72)
 

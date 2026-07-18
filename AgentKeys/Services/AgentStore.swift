@@ -14,6 +14,7 @@ final class AgentStore {
 
     private let client: ConnectorClient
     private var pollTask: Task<Void, Never>?
+    private var consecutiveFailures = 0
 
     enum ConnectionState: Equatable {
         case demo
@@ -29,13 +30,28 @@ final class AgentStore {
             case .failed: "Offline"
             }
         }
+
+        var detail: String? {
+            if case .failed(let reason) = self { return reason }
+            return nil
+        }
     }
 
     init(client: ConnectorClient = ConnectorClient()) {
         self.client = client
-        configuration = .demo
-        agents = Self.fixtures
+        if let saved = ConnectorConfigurationStore.load() {
+            configuration = saved
+            agents = []
+            connectionState = .connecting
+        } else {
+            configuration = .demo
+            agents = Self.fixtures
+        }
         selectedAgentID = agents.first?.id
+    }
+
+    var hasStoredConnector: Bool {
+        ConnectorConfigurationStore.load() != nil
     }
 
     var selectedAgent: Agent? {
@@ -47,7 +63,8 @@ final class AgentStore {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh()
-                try? await Task.sleep(for: .seconds(1))
+                let interval = await self?.pollInterval ?? .seconds(1)
+                try? await Task.sleep(for: interval)
             }
         }
     }
@@ -57,23 +74,35 @@ final class AgentStore {
         pollTask = nil
     }
 
+    /// Back off while the connector is unreachable instead of hammering it.
+    private var pollInterval: Duration {
+        if case .failed = connectionState { return .seconds(3) }
+        return .seconds(1)
+    }
+
     func refresh() async {
-        connectionState = .connecting
         do {
             let snapshot = try await client.snapshot(configuration: configuration)
             agents = snapshot.agents
             if !agents.contains(where: { $0.id == selectedAgentID }) {
                 selectedAgentID = agents.first?.id
             }
+            consecutiveFailures = 0
             connectionState = .connected
         } catch is CancellationError {
             return
         } catch {
             if configuration == .demo {
                 agents = Self.fixtures
+                if selectedAgentID == nil { selectedAgentID = agents.first?.id }
                 connectionState = .demo
             } else {
-                connectionState = .failed(error.localizedDescription)
+                // Tolerate a single transient miss while connected; anything
+                // more (or a failure before ever connecting) surfaces as offline.
+                consecutiveFailures += 1
+                if connectionState != .connected || consecutiveFailures >= 2 {
+                    connectionState = .failed(error.localizedDescription)
+                }
             }
         }
     }
@@ -133,8 +162,23 @@ final class AgentStore {
 
     func connect() {
         stopPolling()
+        consecutiveFailures = 0
+        ConnectorConfigurationStore.save(configuration)
         connectionState = .connecting
         startPolling()
+    }
+
+    /// Applies a configuration parsed from an `agentkeys://pair` QR code or
+    /// deep link and connects immediately.
+    func apply(pairing configuration: ConnectorConfiguration) {
+        self.configuration = configuration
+        connect()
+    }
+
+    /// Removes the stored pairing and returns to the offline demo.
+    func forgetConnector() {
+        ConnectorConfigurationStore.clear()
+        useDemo()
     }
 
     private func applyDemo(_ action: AgentAction, to id: UUID, text: String?) {

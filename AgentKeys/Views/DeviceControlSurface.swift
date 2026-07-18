@@ -26,18 +26,33 @@ struct DeviceControlSurface: View {
 
     private var masthead: some View {
         HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text("AgentKeys")
                     .font(.system(size: 21, weight: .semibold))
                     .tracking(-0.4)
                     .foregroundStyle(DeckTheme.ink)
 
-                HStack(spacing: 6) {
-                    DeckLED(color: connectionColor, size: 6)
-                    Text(store.connectionState.label.uppercased())
-                        .font(.system(size: 9, weight: .semibold))
-                        .kerning(1.3)
-                        .foregroundStyle(DeckTheme.silkscreen.opacity(0.75))
+                Button(action: onOpenSettings) {
+                    HStack(spacing: 6) {
+                        DeckLED(color: connectionColor, size: 6)
+                        Text(connectionChipText)
+                            .font(.system(size: 9, weight: .semibold))
+                            .kerning(1.1)
+                            .foregroundStyle(DeckTheme.silkscreen)
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.75), in: Capsule())
+                    .overlay { Capsule().stroke(.white, lineWidth: 1) }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Connection: \(store.connectionState.label). Opens connector settings.")
+
+                if let detail = store.connectionState.detail {
+                    Text(detail)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.red.opacity(0.85))
+                        .lineLimit(1)
                 }
             }
 
@@ -308,6 +323,15 @@ struct DeviceControlSurface: View {
         case .connecting: .blue
         case .connected: .green
         case .failed: .red
+        }
+    }
+
+    private var connectionChipText: String {
+        switch store.connectionState {
+        case .demo: "DEMO · TAP TO PAIR"
+        case .connecting: "CONNECTING…"
+        case .connected: "CONNECTED"
+        case .failed: "OFFLINE · TAP TO FIX"
         }
     }
 
