@@ -12,6 +12,7 @@ struct DeviceControlSurface: View {
     let onOpenSettings: () -> Void
 
     private var selectedAgent: Agent? { store.selectedAgent }
+    @ScaledMetric(relativeTo: .caption) private var textScale = 1.0
 
     var body: some View {
         VStack(spacing: 14) {
@@ -36,7 +37,7 @@ struct DeviceControlSurface: View {
                     HStack(spacing: 6) {
                         DeckLED(color: connectionColor, size: 6)
                         Text(connectionChipText)
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(size: 9 * textScale, weight: .semibold))
                             .kerning(1.1)
                             .foregroundStyle(DeckTheme.silkscreen)
                     }
@@ -205,17 +206,17 @@ struct DeviceControlSurface: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 7) {
                         Text(agent.name)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 13 * textScale, weight: .semibold))
                             .foregroundStyle(.white)
 
                         Text("\(agent.provider.shortLabel) · \(agent.model.uppercased()) · \(agent.effort.label.uppercased())")
-                            .font(.system(size: 8, weight: .medium, design: .monospaced))
+                            .font(.system(size: 8 * textScale, weight: .medium, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.45))
                             .lineLimit(1)
                     }
 
                     Text(agent.task)
-                        .font(.system(size: 11, weight: .regular))
+                        .font(.system(size: 11 * textScale, weight: .regular))
                         .foregroundStyle(.white.opacity(0.62))
                         .lineLimit(1)
                 }
@@ -223,12 +224,12 @@ struct DeviceControlSurface: View {
                 Spacer(minLength: 6)
 
                 Text(agent.status.label.uppercased())
-                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 8 * textScale, weight: .semibold, design: .monospaced))
                     .kerning(0.8)
                     .foregroundStyle(agent.status.color)
             } else {
                 Text("NO AGENT SELECTED")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 10 * textScale, weight: .semibold, design: .monospaced))
                     .kerning(1)
                     .foregroundStyle(.white.opacity(0.55))
                     .frame(maxWidth: .infinity)
@@ -248,6 +249,18 @@ struct DeviceControlSurface: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
                         .stroke(.white.opacity(0.16), lineWidth: 1)
+                }
+                .overlay(alignment: .top) {
+                    // Glass gloss across the top of the display.
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [.white.opacity(0.13), .clear],
+                                startPoint: .top,
+                                endPoint: .center
+                            )
+                        )
+                        .allowsHitTesting(false)
                 }
                 .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
         }

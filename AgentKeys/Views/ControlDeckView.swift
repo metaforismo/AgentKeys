@@ -18,6 +18,8 @@ struct ControlDeckView: View {
                         onOpenBranch: { activeSheet = .branch },
                         onOpenSettings: { activeSheet = .settings }
                     )
+                    .frame(maxWidth: 560)
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 14)
                     .padding(.top, 18)
                     .padding(.bottom, 28)

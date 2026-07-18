@@ -50,16 +50,30 @@ struct TactileButtonStyle: ButtonStyle {
     }
 }
 
+/// Reports the press state outward so a key can sink its cap into a static
+/// housing — the housing must not travel with the cap.
+struct PressTrackingButtonStyle: ButtonStyle {
+    @Binding var isPressed: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { _, pressed in
+                isPressed = pressed
+            }
+    }
+}
+
 // MARK: - Silkscreen
 
 struct Silkscreen: View {
     let text: String
     var size: CGFloat = 9
     var opacity: Double = 0.9
+    @ScaledMetric(relativeTo: .caption2) private var scale = 1.0
 
     var body: some View {
         Text(text)
-            .font(.system(size: size, weight: .medium))
+            .font(.system(size: size * scale, weight: .medium))
             .kerning(0.9)
             .foregroundStyle(DeckTheme.silkscreen.opacity(opacity))
             .lineLimit(1)
@@ -177,17 +191,25 @@ struct MatteKeycap<Icon: View>: View {
     let action: () -> Void
     @ViewBuilder let icon: Icon
 
+    @State private var isPressed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .body) private var heightScale = 1.0
+
+    private var capHeight: CGFloat { height * min(heightScale, 1.4) }
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 10) {
                 ZStack {
+                    // The housing stays put; only the cap travels.
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .fill(DeckTheme.housing)
                         .padding(.horizontal, 8)
-                        .frame(height: height)
+                        .frame(height: capHeight)
                         .offset(y: 6)
 
                     capFace
+                        .offset(y: isPressed ? 4.5 : 0)
                 }
 
                 if let caption {
@@ -195,7 +217,12 @@ struct MatteKeycap<Icon: View>: View {
                 }
             }
         }
-        .buttonStyle(TactileButtonStyle())
+        .buttonStyle(PressTrackingButtonStyle(isPressed: $isPressed))
+        .animation(
+            reduceMotion ? .easeOut(duration: 0.08) : .spring(response: 0.18, dampingFraction: 0.85),
+            value: isPressed
+        )
+        .sensoryFeedback(.impact(weight: .light), trigger: isPressed) { _, pressed in pressed }
         .disabled(!enabled)
         .accessibilityIdentifier(accessibilityID)
     }
@@ -204,7 +231,7 @@ struct MatteKeycap<Icon: View>: View {
         icon
             .foregroundStyle(DeckTheme.ink.opacity(enabled ? 1 : 0.28))
             .frame(maxWidth: .infinity)
-            .frame(height: height)
+            .frame(height: capHeight)
             .background {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(
@@ -223,7 +250,7 @@ struct MatteKeycap<Icon: View>: View {
                                     colors: [.white, .white.opacity(0)],
                                     center: .init(x: 0.5, y: 0.42),
                                     startRadius: 1,
-                                    endRadius: height * 0.46
+                                    endRadius: capHeight * 0.46
                                 )
                             )
                             .padding(5)
@@ -240,8 +267,9 @@ struct MatteKeycap<Icon: View>: View {
                                 lineWidth: 1
                             )
                     }
-                    .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
-                    .shadow(color: .black.opacity(0.10), radius: 6, y: 5)
+                    // The drop shadow collapses as the cap bottoms out.
+                    .shadow(color: .black.opacity(0.10), radius: isPressed ? 1 : 2, y: isPressed ? 0.5 : 1)
+                    .shadow(color: .black.opacity(0.10), radius: isPressed ? 2 : 6, y: isPressed ? 1.5 : 5)
             }
     }
 }
@@ -256,6 +284,14 @@ struct AgentSwitchKey: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @State private var isPressed = false
+    @State private var breathing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ScaledMetric(relativeTo: .body) private var heightScale = 1.0
+
+    private var keyHeight: CGFloat { 66 * min(heightScale, 1.4) }
+    private var isThinking: Bool { agent.status == .thinking }
+
     private var glow: Color {
         agent.status == .idle ? DeckTheme.idleGlow : agent.status.color
     }
@@ -265,11 +301,20 @@ struct AgentSwitchKey: View {
         return agent.status == .idle ? 0.55 : 0.8
     }
 
+    /// Base bloom modulated by the thinking breath and by finger pressure —
+    /// pressing a key drives its LED brighter, like bottoming out a switch.
+    private var effectiveBloom: Double {
+        var value = bloom
+        if isThinking { value *= breathing ? 1.3 : 0.75 }
+        if isPressed { value = min(1.5, value * 1.35) }
+        return value
+    }
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 10) {
                 ZStack {
-                    // Color-stained housing under the clear cap.
+                    // Color-stained housing under the clear cap; stays put.
                     RoundedRectangle(cornerRadius: 9, style: .continuous)
                         .fill(
                             LinearGradient(
@@ -279,26 +324,47 @@ struct AgentSwitchKey: View {
                             )
                         )
                         .padding(.horizontal, 7)
-                        .frame(height: 66)
+                        .frame(height: keyHeight)
                         .offset(y: 6)
 
                     // LED bloom escaping around the cap.
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(glow)
-                        .frame(height: 66)
+                        .frame(height: keyHeight)
                         .blur(radius: 13)
-                        .opacity(0.45 * bloom)
+                        .opacity(0.45 * effectiveBloom)
 
                     capFace
+                        .offset(y: isPressed ? 4.5 : 0)
                 }
 
                 Silkscreen(text: agent.name.uppercased(), size: 8)
             }
         }
-        .buttonStyle(TactileButtonStyle())
+        .buttonStyle(PressTrackingButtonStyle(isPressed: $isPressed))
+        .animation(
+            reduceMotion ? .easeOut(duration: 0.08) : .spring(response: 0.18, dampingFraction: 0.85),
+            value: isPressed
+        )
+        .sensoryFeedback(.impact(weight: .light), trigger: isPressed) { _, pressed in pressed }
+        .onAppear { updateBreathing() }
+        .onChange(of: isThinking) { updateBreathing() }
+        .onChange(of: reduceMotion) { updateBreathing() }
         .accessibilityIdentifier("deck-agent-key-\(agent.name)")
         .accessibilityLabel("\(agent.name), \(agent.status.label), \(agent.task)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func updateBreathing() {
+        if isThinking && !reduceMotion {
+            withAnimation(.easeInOut(duration: 1.15).repeatForever(autoreverses: true)) {
+                breathing = true
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.4)) {
+                breathing = false
+            }
+        }
     }
 
     private var capFace: some View {
@@ -310,8 +376,8 @@ struct AgentSwitchKey: View {
             // The LED sits under the stem: a tight radial bloom, not a fill.
             RadialGradient(
                 colors: [
-                    glow.opacity(0.95 * bloom),
-                    glow.opacity(0.35 * bloom),
+                    glow.opacity(min(1, 0.95 * effectiveBloom)),
+                    glow.opacity(0.35 * effectiveBloom),
                     glow.opacity(0.06)
                 ],
                 center: .center,
@@ -343,8 +409,8 @@ struct AgentSwitchKey: View {
                     lineWidth: isSelected ? 1.5 : 1
                 )
         }
-        .frame(height: 66)
-        .shadow(color: glow.opacity(0.35 * bloom), radius: 10, y: 3)
+        .frame(height: keyHeight)
+        .shadow(color: glow.opacity(min(1, 0.35 * effectiveBloom)), radius: 10, y: 3)
     }
 }
 
@@ -378,6 +444,9 @@ struct SwitchStem: View {
 /// bare contacts, so it cannot be mistaken for an idle (powered) channel.
 struct EmptySwitchKey: View {
     let action: () -> Void
+    @ScaledMetric(relativeTo: .body) private var heightScale = 1.0
+
+    private var keyHeight: CGFloat { 66 * min(heightScale, 1.4) }
 
     var body: some View {
         Button(action: action) {
@@ -396,7 +465,7 @@ struct EmptySwitchKey: View {
                         .font(.system(size: 15, weight: .light))
                         .foregroundStyle(DeckTheme.silkscreen.opacity(0.55))
                 }
-                .frame(height: 66)
+                .frame(height: keyHeight)
 
                 Silkscreen(text: "ADD", size: 8, opacity: 0.5)
             }
