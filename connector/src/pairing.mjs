@@ -52,6 +52,29 @@ export function loadOrCreateTokens({
   };
 }
 
+/**
+ * Read-only token lookup for adapter processes: environment first, then the
+ * credentials file written by the connector. Never creates or rotates
+ * anything — a missing file simply returns nulls.
+ */
+export function loadStoredTokens({
+  configDir = join(homedir(), ".agentkeys"),
+  env = process.env,
+} = {}) {
+  let stored = {};
+  try {
+    stored = JSON.parse(readFileSync(join(configDir, TOKEN_FILE), "utf8"));
+  } catch {
+    stored = {};
+  }
+  return {
+    phoneToken: env.AGENTKEYS_PHONE_TOKEN
+      ?? (isValidToken(stored.phoneToken, 12) ? stored.phoneToken : null),
+    integrationToken: env.AGENTKEYS_INTEGRATION_TOKEN
+      ?? (isValidToken(stored.integrationToken, 16) ? stored.integrationToken : null),
+  };
+}
+
 function isValidToken(value, minLength) {
   return typeof value === "string" && value.length >= minLength && /^[A-Za-z0-9_-]+$/.test(value);
 }

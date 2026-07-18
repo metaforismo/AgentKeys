@@ -46,6 +46,7 @@ struct DeviceControlSurface: View {
                     .overlay { Capsule().stroke(.white, lineWidth: 1) }
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("deck-connection-chip")
                 .accessibilityLabel("Connection: \(store.connectionState.label). Opens connector settings.")
 
                 if let detail = store.connectionState.detail {
@@ -68,6 +69,7 @@ struct DeviceControlSurface: View {
                     .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
             }
             .buttonStyle(TactileButtonStyle())
+            .accessibilityIdentifier("deck-settings")
             .accessibilityLabel("Connector settings")
         }
         .padding(.horizontal, 6)
@@ -103,6 +105,7 @@ struct DeviceControlSurface: View {
             // Row 3 — thin-line command keycaps.
             HStack(alignment: .top, spacing: 10) {
                 commandKey(
+                    id: "deck-key-stop",
                     icon: "bolt",
                     caption: "Stop",
                     enabled: selectedAgent?.status == .thinking
@@ -111,6 +114,7 @@ struct DeviceControlSurface: View {
                 }
 
                 commandKey(
+                    id: "deck-key-approve",
                     icon: "checkmark.circle",
                     caption: approveLabel,
                     enabled: selectedAgent?.status == .needsInput
@@ -119,6 +123,7 @@ struct DeviceControlSurface: View {
                 }
 
                 commandKey(
+                    id: "deck-key-reject",
                     icon: "xmark.circle",
                     caption: rejectLabel,
                     enabled: selectedAgent?.status == .needsInput
@@ -127,6 +132,7 @@ struct DeviceControlSurface: View {
                 }
 
                 commandKey(
+                    id: "deck-key-branch",
                     icon: "arrow.triangle.branch",
                     caption: "Branch",
                     enabled: selectedAgent?.capabilities.supportsBranch == true,
@@ -144,6 +150,7 @@ struct DeviceControlSurface: View {
                 MatteKeycap(
                     caption: "New",
                     enabled: selectedAgent != nil,
+                    accessibilityID: "deck-key-new",
                     action: { Task { await store.perform(.newChat) } }
                 ) {
                     CloudTerminalGlyph()
@@ -176,12 +183,13 @@ struct DeviceControlSurface: View {
     }
 
     private func commandKey(
+        id: String,
         icon: String,
         caption: String,
         enabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        MatteKeycap(caption: caption, enabled: enabled, action: action) {
+        MatteKeycap(caption: caption, enabled: enabled, accessibilityID: id, action: action) {
             Image(systemName: icon)
                 .font(.system(size: 19, weight: .light))
         }
@@ -248,6 +256,7 @@ struct DeviceControlSurface: View {
     private var micBar: some View {
         MatteKeycap(
             caption: recorder.isRecording ? "Listening…" : "Push to talk",
+            accessibilityID: "deck-push-to-talk",
             action: toggleRecording
         ) {
             Image(systemName: recorder.isRecording ? "waveform" : "mic")
@@ -262,6 +271,7 @@ struct DeviceControlSurface: View {
     private var promptConsole: some View {
         HStack(spacing: 7) {
             TextField("Prompt selected agent", text: $store.prompt)
+                .accessibilityIdentifier("deck-prompt-field")
                 .font(.system(size: 13, weight: .regular))
                 .submitLabel(.send)
                 .onSubmit(sendPrompt)
@@ -276,6 +286,7 @@ struct DeviceControlSurface: View {
             .buttonStyle(TactileButtonStyle())
             .disabled(trimmedPrompt.isEmpty)
             .opacity(trimmedPrompt.isEmpty ? 0.35 : 1)
+            .accessibilityIdentifier("deck-send-prompt")
             .accessibilityLabel("Send prompt")
         }
         .padding(.leading, 13)

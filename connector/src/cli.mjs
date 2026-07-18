@@ -9,6 +9,14 @@ const port = Number(option("--port") ?? "7777");
 const demo = args.has("--demo");
 const showQR = !args.has("--no-qr");
 
+// Explicit, deliberate disclosure only: the integration token authorizes
+// adapter writes, so it must never appear in routine startup logs.
+if (args.has("--show-integration-token")) {
+  const { integrationToken } = loadOrCreateTokens();
+  process.stdout.write(`${integrationToken}\n`);
+  process.exit(0);
+}
+
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   console.error("--port must be between 1 and 65535");
   process.exit(2);
@@ -29,7 +37,8 @@ server.listen(port, host, () => {
   } else {
     console.log("Tokens loaded from environment.");
   }
-  console.log(`Integration token (for adapters): ${integrationToken}`);
+  console.log("Adapters on this machine read the integration token automatically.");
+  console.log("For a remote adapter, run `agentkeys --show-integration-token` (prints the secret, then exits).");
 
   const reachableHost = pairableHost();
   if (!reachableHost) {

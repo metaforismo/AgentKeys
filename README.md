@@ -113,13 +113,14 @@ When reachable beyond loopback it prints an `agentkeys://pair` link and a QR cod
 
 ## Connect Codex
 
-With the companion running, open a second terminal and reuse only its integration token:
+With the companion running, open a second terminal on the same machine — the adapter reads the integration token from `~/.agentkeys/credentials.json` automatically:
 
 ```sh
 cd connector
-export AGENTKEYS_INTEGRATION_TOKEN='the-same-integration-token'
 npm run start:codex -- --workspace /absolute/path/to/project
 ```
+
+For an adapter on a different machine, export `AGENTKEYS_INTEGRATION_TOKEN`; the companion reveals the secret only via the explicit `node src/cli.mjs --show-integration-token` command, never in its startup logs.
 
 The adapter starts or resumes a real Codex thread, publishes only the controls supported by the active model catalog, and maps Codex lifecycle notifications to the five AgentKeys states. It creates new threads with `workspace-write` sandboxing and `on-request` approvals. Structured request types that the phone cannot represent are rejected and must be continued on the Mac.
 
@@ -127,11 +128,10 @@ Because `codex app-server` is experimental, run `npm run smoke:codex` after upgr
 
 ## Connect Claude Code
 
-With the companion running, open a second terminal and reuse only its integration token:
+With the companion running, open a second terminal on the same machine — the adapter reads the integration token automatically:
 
 ```sh
 cd connector
-export AGENTKEYS_INTEGRATION_TOKEN='the-same-integration-token'
 npm run start:claude -- --workspace /absolute/path/to/project
 ```
 

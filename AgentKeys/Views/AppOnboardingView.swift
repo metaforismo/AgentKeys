@@ -24,10 +24,12 @@ struct AppOnboardingView: View {
             VStack(spacing: 12) {
                 Button("Get Started", action: onGetStarted)
                     .buttonStyle(OnboardingPrimaryButtonStyle())
+                    .accessibilityIdentifier("onboarding-get-started")
                     .accessibilityHint("Opens the interactive AgentKeys demo")
 
                 Button("Connect a Mac", action: onConnect)
                     .buttonStyle(OnboardingSecondaryButtonStyle())
+                    .accessibilityIdentifier("onboarding-connect-mac")
                     .accessibilityHint("Opens the connector setup")
             }
             .padding(.horizontal, 24)

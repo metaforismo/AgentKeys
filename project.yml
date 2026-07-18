@@ -46,12 +46,26 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.agentkeys.tests
         GENERATE_INFOPLIST_FILE: YES
+  AgentKeysUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: AgentKeysUITests
+    dependencies:
+      - target: AgentKeys
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.agentkeys.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: AgentKeys
 schemes:
   AgentKeys:
     build:
       targets:
         AgentKeys: all
         AgentKeysTests: [test]
+        AgentKeysUITests: [test]
     test:
       targets:
         - AgentKeysTests
+        - AgentKeysUITests

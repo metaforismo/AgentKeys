@@ -3,7 +3,24 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { candidateHosts, loadOrCreateTokens, pairingURL } from "../src/pairing.mjs";
+import { candidateHosts, loadOrCreateTokens, loadStoredTokens, pairingURL } from "../src/pairing.mjs";
+
+test("loadStoredTokens reads without creating and honours env overrides", () => {
+  const emptyDir = mkdtempSync(join(tmpdir(), "agentkeys-"));
+  const missing = loadStoredTokens({ configDir: emptyDir, env: {} });
+  assert.equal(missing.phoneToken, null);
+  assert.equal(missing.integrationToken, null);
+
+  const configDir = mkdtempSync(join(tmpdir(), "agentkeys-"));
+  const created = loadOrCreateTokens({ configDir, env: {} });
+  const read = loadStoredTokens({ configDir, env: {} });
+  assert.equal(read.integrationToken, created.integrationToken);
+  assert.equal(read.phoneToken, created.phoneToken);
+
+  const overridden = loadStoredTokens({ configDir, env: { AGENTKEYS_INTEGRATION_TOKEN: "integration-from-env-1234" } });
+  assert.equal(overridden.integrationToken, "integration-from-env-1234");
+  assert.equal(overridden.phoneToken, created.phoneToken);
+});
 
 test("creates tokens on first run and persists them with 0600", () => {
   const configDir = mkdtempSync(join(tmpdir(), "agentkeys-"));

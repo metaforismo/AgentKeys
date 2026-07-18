@@ -173,6 +173,7 @@ struct MatteKeycap<Icon: View>: View {
     var caption: String? = nil
     var enabled: Bool = true
     var height: CGFloat = 64
+    var accessibilityID: String = ""
     let action: () -> Void
     @ViewBuilder let icon: Icon
 
@@ -196,6 +197,7 @@ struct MatteKeycap<Icon: View>: View {
         }
         .buttonStyle(TactileButtonStyle())
         .disabled(!enabled)
+        .accessibilityIdentifier(accessibilityID)
     }
 
     private var capFace: some View {
@@ -294,6 +296,7 @@ struct AgentSwitchKey: View {
             }
         }
         .buttonStyle(TactileButtonStyle())
+        .accessibilityIdentifier("deck-agent-key-\(agent.name)")
         .accessibilityLabel("\(agent.name), \(agent.status.label), \(agent.task)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -399,6 +402,7 @@ struct EmptySwitchKey: View {
             }
         }
         .buttonStyle(TactileButtonStyle())
+        .accessibilityIdentifier("deck-add-agent")
         .accessibilityLabel("Add or connect an agent")
     }
 }
@@ -492,6 +496,8 @@ struct DeckKnob: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(TactileButtonStyle())
+        .accessibilityIdentifier("deck-mode-knob")
+        .accessibilityLabel(caption)
     }
 }
 
@@ -597,6 +603,8 @@ struct DeckJoystick: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(TactileButtonStyle())
+        .accessibilityIdentifier("deck-control-stick")
+        .accessibilityLabel("Agent controls")
     }
 
     private var mountScrews: some View {

@@ -63,7 +63,7 @@ final class AgentStore {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh()
-                let interval = await self?.pollInterval ?? .seconds(1)
+                let interval = self?.pollInterval ?? .seconds(1)
                 try? await Task.sleep(for: interval)
             }
         }
