@@ -4,6 +4,17 @@ struct ControlDeckView: View {
     @Bindable var store: AgentStore
     @State private var recorder = SpeechPromptRecorder()
     @State private var activeSheet: DeckSheet?
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+#if DEBUG
+    private let launchesControlsForUITesting: Bool
+#endif
+
+    init(store: AgentStore) {
+        self.store = store
+#if DEBUG
+        launchesControlsForUITesting = ProcessInfo.processInfo.arguments.contains("-ui-testing-controls")
+#endif
+    }
 
     var body: some View {
         NavigationStack {
@@ -11,18 +22,20 @@ struct ControlDeckView: View {
                 StudioBackground()
 
                 ScrollView {
-                    DeviceControlSurface(
-                        store: store,
-                        recorder: recorder,
-                        onOpenControls: { activeSheet = .controls },
-                        onOpenBranch: { activeSheet = .branch },
-                        onOpenSettings: { activeSheet = .settings }
-                    )
-                    .frame(maxWidth: 560)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 14)
-                    .padding(.top, 18)
-                    .padding(.bottom, 28)
+                    if horizontalSizeClass == .regular {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 40)
+                            deckSurface
+                                .frame(maxWidth: 680)
+                            Spacer(minLength: 40)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .containerRelativeFrame(.vertical)
+                    } else {
+                        deckSurface
+                            .frame(maxWidth: 560)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .scrollIndicators(.hidden)
             }
@@ -39,6 +52,11 @@ struct ControlDeckView: View {
             }
             .task { store.startPolling() }
             .onAppear {
+#if DEBUG
+                if launchesControlsForUITesting {
+                    activeSheet = .controls
+                }
+#endif
                 if store.isSettingsPresented {
                     activeSheet = .settings
                     store.isSettingsPresented = false
@@ -55,6 +73,19 @@ struct ControlDeckView: View {
             }
             .sensoryFeedback(.selection, trigger: store.selectedAgentID)
         }
+    }
+
+    private var deckSurface: some View {
+        DeviceControlSurface(
+            store: store,
+            recorder: recorder,
+            onOpenControls: { activeSheet = .controls },
+            onOpenBranch: { activeSheet = .branch },
+            onOpenSettings: { activeSheet = .settings }
+        )
+        .padding(.horizontal, 14)
+        .padding(.top, 18)
+        .padding(.bottom, 28)
     }
 }
 
@@ -112,7 +143,7 @@ private struct ProviderControlSheet: View {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(agent.provider.label)
                                     .font(.system(.headline, weight: .semibold))
-                                Text("\(agent.harness) · \(agent.model)")
+                                Text("\(agent.harness) · \(agent.modelDisplayName)")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
@@ -121,7 +152,10 @@ private struct ProviderControlSheet: View {
                         if !agent.capabilities.models.isEmpty {
                             controlGroup(title: "Model", detail: modelDetail) {
                                 ForEach(agent.capabilities.models, id: \.self) { model in
-                                    SelectorCapsule(title: model, selected: agent.model == model) {
+                                    SelectorCapsule(
+                                        title: AgentModelPresentation.label(for: model, provider: agent.provider),
+                                        selected: agent.model == model
+                                    ) {
                                         Task { await store.perform(.setModel, text: model) }
                                     }
                                 }

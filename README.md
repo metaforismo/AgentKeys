@@ -44,10 +44,12 @@ AgentKeys turns the phone already on your desk into a compact console for agent 
 - Experimental Claude Agent SDK adapter with persistent prompts, exact tool approvals, interrupt, model, effort, fast mode, permission modes, resume, and fork.
 
 <p align="center">
-  <a href="assets/agentkeys-controls.png"><img src="assets/agentkeys-controls.png" alt="AgentKeys Codex control sheet with model, permission, reasoning, speed, live web search, resume, and fork controls" width="360"></a>
+  <a href="assets/agentkeys-controls.png"><img src="assets/agentkeys-controls.png" alt="AgentKeys Codex control sheet with the current model, permission, reasoning, speed, live web search, resume, and fork controls" width="360"></a>
+  &nbsp;&nbsp;
+  <a href="assets/agentkeys-claude-controls.png"><img src="assets/agentkeys-claude-controls.png" alt="AgentKeys Claude Code control sheet with Fable 5, Opus 4.8, Sonnet 5, and Haiku 4.5" width="360"></a>
 </p>
 
-<p align="center"><sub>Advanced controls stay behind the rotary dial, keeping the main deck focused on agent state and frequent actions.</sub></p>
+<p align="center"><sub>Provider-specific controls stay behind the rotary dial, keeping the main deck focused while Codex and Claude Code expose their own live capabilities.</sub></p>
 
 The repository includes real, experimental adapters for **Codex app-server** and the **Claude Agent SDK**. Both translate structured lifecycle events and exact pending approvals; neither scrapes terminal text, injects keystrokes, or synthesizes approval state. Unsupported requests fail closed, and Claude Code permission bypass is intentionally outside the protocol.
 
@@ -150,6 +152,12 @@ This is the measured baseline. A streaming transcription service should replace 
 <p align="center"><img src="assets/agentkeys-hero.png" alt="AgentKeys visual identity with translucent tactile controls" width="100%"></p>
 
 The interface borrows the satisfying clarity of a physical macro pad while remaining a phone-native tool. The first-run flow teaches monitoring, command, and provider switching before revealing the denser control deck. Agent status is communicated through icon, text, and color so the meaning does not depend on color alone.
+
+<p align="center">
+  <a href="assets/agentkeys-ipad.png"><img src="assets/agentkeys-ipad.png" alt="AgentKeys centered hardware control deck running on an iPad Pro simulator" width="560"></a>
+</p>
+
+<p align="center"><sub>On iPad, the control surface keeps its physical proportions and sits centered like a dedicated console instead of stretching into a dashboard.</sub></p>
 
 Generated visual assets and their reproducible processing steps are documented in [assets/GENERATED_ASSETS.md](assets/GENERATED_ASSETS.md).
 

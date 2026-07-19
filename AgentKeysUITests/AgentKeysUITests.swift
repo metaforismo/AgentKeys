@@ -56,7 +56,10 @@ final class AgentKeysUITests: XCTestCase {
     @MainActor
     private func launch(onboarded: Bool) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments += ["-hasCompletedOnboarding", onboarded ? "YES" : "NO"]
+        app.launchArguments.append("-ui-testing")
+        if onboarded {
+            app.launchArguments.append("-ui-testing-onboarded")
+        }
         app.launch()
         return app
     }

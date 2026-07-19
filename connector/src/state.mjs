@@ -18,7 +18,7 @@ const defaultCapabilities = {
     modes: ["manual", "plan"],
     efforts: ["low", "medium", "high", "xhigh"],
     speeds: ["standard", "fast"],
-    models: ["gpt-5.4", "gpt-5.4-mini"],
+    models: ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5", "gpt-5.3-codex-spark"],
     workflows: ["review_pr", "debug", "refactor", "tests"],
     supportsBranch: true,
     supportsResume: true,
@@ -29,7 +29,7 @@ const defaultCapabilities = {
     modes: ["manual", "accept_edits", "plan", "auto"],
     efforts: ["low", "medium", "high", "xhigh", "max"],
     speeds: ["standard"],
-    models: ["sonnet", "opus", "haiku"],
+    models: ["claude-fable-5", "claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"],
     workflows: ["review_pr", "debug", "refactor", "tests"],
     supportsBranch: true,
     supportsResume: true,
@@ -135,9 +135,9 @@ export class ConnectorState {
 
   #seedDemo() {
     const entries = [
-      ["73659c11-43ed-4aac-8f18-771b977c6901", "Codex", "Codex CLI", "Implement connector protocol", "thinking", { effort: "high", speed: "fast", model: "gpt-5.4", webSearchEnabled: true, branch: "feat/control-deck" }],
+      ["73659c11-43ed-4aac-8f18-771b977c6901", "Codex", "Codex CLI", "Implement connector protocol", "thinking", { effort: "high", speed: "fast", model: "gpt-5.6-sol", webSearchEnabled: true, branch: "feat/control-deck" }],
       ["8fb44c64-d268-4728-bdc8-89c0ac9caad2", "Review", "Codex", "Review security boundary", "needs_input", { mode: "plan", effort: "xhigh", branch: "review/security" }],
-      ["fc2e5070-041c-4ad2-a90e-959a34af3bbf", "Design", "Claude Code", "Polish tactile controls", "complete", { mode: "accept_edits", effort: "high", model: "sonnet", branch: "design/hardware-ui" }],
+      ["fc2e5070-041c-4ad2-a90e-959a34af3bbf", "Design", "Claude Code", "Polish tactile controls", "complete", { mode: "accept_edits", effort: "high", model: "claude-fable-5", branch: "design/hardware-ui" }],
       ["c8c71a25-245b-4eab-92a3-a03c39a9fa08", "Docs", "Generic", "Waiting for work", "idle", {}],
       ["25d4ee53-91e4-4b40-91ee-b33fe5472a2a", "Tests", "Codex", "Simulator smoke test", "error", { branch: "test/smoke" }],
     ];
@@ -197,7 +197,7 @@ function modelArray(value) {
 
 function validModel(value) {
   const model = boundedString(value, "model", 80);
-  if (!/^[A-Za-z0-9._:-]+$/.test(model)) throw new TypeError("invalid model");
+  if (!/^[A-Za-z0-9._:\-\[\]]+$/.test(model)) throw new TypeError("invalid model");
   return model;
 }
 

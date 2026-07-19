@@ -380,7 +380,7 @@ function validModelInfo(entry) {
 }
 
 function validModel(value) {
-  return typeof value === "string" && /^[A-Za-z0-9._:-]{1,80}$/.test(value);
+  return typeof value === "string" && /^[A-Za-z0-9._:\-\[\]]{1,80}$/.test(value);
 }
 
 function truncate(value, length) {

@@ -48,6 +48,11 @@ final class AgentStore {
             agents = Self.fixtures
         }
         selectedAgentID = agents.first?.id
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-claude") {
+            selectedAgentID = agents.first(where: { $0.provider == .claudeCode })?.id
+        }
+#endif
     }
 
     var hasStoredConnector: Bool {
@@ -231,11 +236,11 @@ final class AgentStore {
     }
 
     static let fixtures: [Agent] = [
-        Agent(id: UUID(uuidString: "73659C11-43ED-4AAC-8F18-771B977C6901")!, name: "Codex", harness: "Codex CLI", task: "Implement connector protocol", status: .thinking, updatedAt: .now, provider: .codex, effort: .high, speed: .fast, model: "gpt-5.4", webSearchEnabled: true, branch: "feat/control-deck"),
-        Agent(id: UUID(uuidString: "8FB44C64-D268-4728-BDC8-89C0AC9CAAD2")!, name: "Review", harness: "Codex", task: "Review security boundary", status: .needsInput, updatedAt: .now, provider: .codex, mode: .plan, effort: .xhigh, model: "gpt-5.4", branch: "review/security"),
-        Agent(id: UUID(uuidString: "FC2E5070-041C-4AD2-A90E-959A34AF3BBF")!, name: "Design", harness: "Claude Code", task: "Polish tactile controls", status: .complete, updatedAt: .now, provider: .claudeCode, mode: .acceptEdits, effort: .high, model: "sonnet", branch: "design/hardware-ui"),
+        Agent(id: UUID(uuidString: "73659C11-43ED-4AAC-8F18-771B977C6901")!, name: "Codex", harness: "Codex CLI", task: "Implement connector protocol", status: .thinking, updatedAt: .now, provider: .codex, effort: .high, speed: .fast, model: "gpt-5.6-sol", webSearchEnabled: true, branch: "feat/control-deck"),
+        Agent(id: UUID(uuidString: "8FB44C64-D268-4728-BDC8-89C0AC9CAAD2")!, name: "Review", harness: "Codex", task: "Review security boundary", status: .needsInput, updatedAt: .now, provider: .codex, mode: .plan, effort: .xhigh, model: "gpt-5.6-terra", branch: "review/security"),
+        Agent(id: UUID(uuidString: "FC2E5070-041C-4AD2-A90E-959A34AF3BBF")!, name: "Design", harness: "Claude Code", task: "Polish tactile controls", status: .complete, updatedAt: .now, provider: .claudeCode, mode: .acceptEdits, effort: .high, model: "claude-fable-5", branch: "design/hardware-ui"),
         Agent(id: UUID(uuidString: "C8C71A25-245B-4EAB-92A3-A03C39A9FA08")!, name: "Docs", harness: "Generic", task: "Waiting for work", status: .idle, updatedAt: .now),
-        Agent(id: UUID(uuidString: "25D4EE53-91E4-4B40-91EE-B33FE5472A2A")!, name: "Tests", harness: "Codex", task: "Simulator smoke test", status: .error, updatedAt: .now, provider: .codex, effort: .medium, model: "gpt-5.4-mini", branch: "test/smoke")
+        Agent(id: UUID(uuidString: "25D4EE53-91E4-4B40-91EE-B33FE5472A2A")!, name: "Tests", harness: "Codex", task: "Simulator smoke test", status: .error, updatedAt: .now, provider: .codex, effort: .medium, model: "gpt-5.3-codex-spark", branch: "test/smoke")
     ]
 
     private func next<T: Equatable>(after current: T, in values: [T]) -> T? {

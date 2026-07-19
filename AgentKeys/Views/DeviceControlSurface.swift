@@ -209,7 +209,7 @@ struct DeviceControlSurface: View {
                             .font(.system(size: 13 * textScale, weight: .semibold))
                             .foregroundStyle(.white)
 
-                        Text("\(agent.provider.shortLabel) · \(agent.model.uppercased()) · \(agent.effort.label.uppercased())")
+                        Text("\(agent.provider.shortLabel) · \(agent.modelDisplayName.uppercased()) · \(agent.effort.label.uppercased())")
                             .font(.system(size: 8 * textScale, weight: .medium, design: .monospaced))
                             .foregroundStyle(.white.opacity(0.45))
                             .lineLimit(1)
