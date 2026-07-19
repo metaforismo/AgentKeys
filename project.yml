@@ -22,7 +22,11 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: AgentKeys connects to the companion running on your Mac.
+        NSCameraUsageDescription: AgentKeys uses the camera only to scan the pairing QR code shown by the Mac connector.
         NSMicrophoneUsageDescription: AgentKeys uses the microphone only while you hold push-to-talk.
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.agentkeys.pairing
+            CFBundleURLSchemes: [agentkeys]
         NSSpeechRecognitionUsageDescription: AgentKeys turns your voice into prompts on device.
         UILaunchScreen: {}
     settings:
@@ -42,12 +46,26 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.agentkeys.tests
         GENERATE_INFOPLIST_FILE: YES
+  AgentKeysUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: AgentKeysUITests
+    dependencies:
+      - target: AgentKeys
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.agentkeys.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: AgentKeys
 schemes:
   AgentKeys:
     build:
       targets:
         AgentKeys: all
         AgentKeysTests: [test]
+        AgentKeysUITests: [test]
     test:
       targets:
         - AgentKeysTests
+        - AgentKeysUITests

@@ -6,9 +6,10 @@ import {
   CodexAdapter,
   CodexAppServerClient,
 } from "./adapters/codex-app-server.mjs";
+import { loadStoredTokens } from "./pairing.mjs";
 
 const connectorURL = option("--connector") ?? "http://127.0.0.1:7777";
-const token = process.env.AGENTKEYS_INTEGRATION_TOKEN;
+const token = loadStoredTokens().integrationToken;
 const agentID = option("--agent-id") ?? process.env.AGENTKEYS_AGENT_ID ?? randomUUID();
 const cwd = resolve(option("--workspace") ?? process.cwd());
 const threadID = option("--thread") ?? null;
@@ -16,7 +17,7 @@ const model = option("--model") ?? null;
 const pollMs = Number(option("--poll-ms") ?? "500");
 
 if (!token || token.length < 16) {
-  console.error("AGENTKEYS_INTEGRATION_TOKEN must match the running connector");
+  console.error("No integration token found. Start the connector once on this machine, or set AGENTKEYS_INTEGRATION_TOKEN (see `agentkeys --show-integration-token`).");
   process.exit(2);
 }
 if (!Number.isInteger(pollMs) || pollMs < 100 || pollMs > 60_000) {

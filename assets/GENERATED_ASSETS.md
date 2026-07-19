@@ -17,4 +17,13 @@ All generated files are distributed under the repository's MIT License.
 
 ## Product screenshots
 
-`agentkeys-onboarding.png`, `agentkeys-simulator.png`, and `agentkeys-controls.png` are native-resolution captures from the real SwiftUI app on an iPhone 17 Pro simulator. They are not generated UI concepts. Refresh a product screenshot only after a successful simulator build, with demo data that contains no credentials or private prompts.
+`agentkeys-onboarding.png`, `agentkeys-simulator.png`, `agentkeys-controls.png`, and `agentkeys-claude-controls.png` are native-resolution captures from the real SwiftUI app on an iPhone 17 Pro simulator. `agentkeys-ipad.png` is a native-resolution capture from an iPad Pro 11-inch simulator. They are not generated UI concepts. Refresh a product screenshot only after a successful simulator build, with demo data that contains no credentials or private prompts.
+
+The DEBUG-only launch arguments keep captures deterministic:
+
+- `-ui-testing` — onboarding
+- `-ui-testing -ui-testing-onboarded` — deck
+- add `-ui-testing-controls` — selected provider controls
+- add `-ui-testing-claude` — select the Claude Code demo agent
+
+Use `xcrun simctl status_bar <device> override --time 09:41 --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4` before capture, and retain the native 1206×2622 PNG output.

@@ -14,6 +14,7 @@ final class AgentStore {
 
     private let client: ConnectorClient
     private var pollTask: Task<Void, Never>?
+    private var consecutiveFailures = 0
 
     enum ConnectionState: Equatable {
         case demo
@@ -29,13 +30,33 @@ final class AgentStore {
             case .failed: "Offline"
             }
         }
+
+        var detail: String? {
+            if case .failed(let reason) = self { return reason }
+            return nil
+        }
     }
 
     init(client: ConnectorClient = ConnectorClient()) {
         self.client = client
-        configuration = .demo
-        agents = Self.fixtures
+        if let saved = ConnectorConfigurationStore.load() {
+            configuration = saved
+            agents = []
+            connectionState = .connecting
+        } else {
+            configuration = .demo
+            agents = Self.fixtures
+        }
         selectedAgentID = agents.first?.id
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-claude") {
+            selectedAgentID = agents.first(where: { $0.provider == .claudeCode })?.id
+        }
+#endif
+    }
+
+    var hasStoredConnector: Bool {
+        ConnectorConfigurationStore.load() != nil
     }
 
     var selectedAgent: Agent? {
@@ -47,7 +68,8 @@ final class AgentStore {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh()
-                try? await Task.sleep(for: .seconds(1))
+                let interval = self?.pollInterval ?? .seconds(1)
+                try? await Task.sleep(for: interval)
             }
         }
     }
@@ -57,23 +79,35 @@ final class AgentStore {
         pollTask = nil
     }
 
+    /// Back off while the connector is unreachable instead of hammering it.
+    private var pollInterval: Duration {
+        if case .failed = connectionState { return .seconds(3) }
+        return .seconds(1)
+    }
+
     func refresh() async {
-        connectionState = .connecting
         do {
             let snapshot = try await client.snapshot(configuration: configuration)
             agents = snapshot.agents
             if !agents.contains(where: { $0.id == selectedAgentID }) {
                 selectedAgentID = agents.first?.id
             }
+            consecutiveFailures = 0
             connectionState = .connected
         } catch is CancellationError {
             return
         } catch {
             if configuration == .demo {
                 agents = Self.fixtures
+                if selectedAgentID == nil { selectedAgentID = agents.first?.id }
                 connectionState = .demo
             } else {
-                connectionState = .failed(error.localizedDescription)
+                // Tolerate a single transient miss while connected; anything
+                // more (or a failure before ever connecting) surfaces as offline.
+                consecutiveFailures += 1
+                if connectionState != .connected || consecutiveFailures >= 2 {
+                    connectionState = .failed(error.localizedDescription)
+                }
             }
         }
     }
@@ -133,8 +167,23 @@ final class AgentStore {
 
     func connect() {
         stopPolling()
+        consecutiveFailures = 0
+        ConnectorConfigurationStore.save(configuration)
         connectionState = .connecting
         startPolling()
+    }
+
+    /// Applies a configuration parsed from an `agentkeys://pair` QR code or
+    /// deep link and connects immediately.
+    func apply(pairing configuration: ConnectorConfiguration) {
+        self.configuration = configuration
+        connect()
+    }
+
+    /// Removes the stored pairing and returns to the offline demo.
+    func forgetConnector() {
+        ConnectorConfigurationStore.clear()
+        useDemo()
     }
 
     private func applyDemo(_ action: AgentAction, to id: UUID, text: String?) {
@@ -187,11 +236,11 @@ final class AgentStore {
     }
 
     static let fixtures: [Agent] = [
-        Agent(id: UUID(uuidString: "73659C11-43ED-4AAC-8F18-771B977C6901")!, name: "Codex", harness: "Codex CLI", task: "Implement connector protocol", status: .thinking, updatedAt: .now, provider: .codex, effort: .high, speed: .fast, model: "gpt-5.4", webSearchEnabled: true, branch: "feat/control-deck"),
-        Agent(id: UUID(uuidString: "8FB44C64-D268-4728-BDC8-89C0AC9CAAD2")!, name: "Review", harness: "Codex", task: "Review security boundary", status: .needsInput, updatedAt: .now, provider: .codex, mode: .plan, effort: .xhigh, model: "gpt-5.4", branch: "review/security"),
-        Agent(id: UUID(uuidString: "FC2E5070-041C-4AD2-A90E-959A34AF3BBF")!, name: "Design", harness: "Claude Code", task: "Polish tactile controls", status: .complete, updatedAt: .now, provider: .claudeCode, mode: .acceptEdits, effort: .high, model: "sonnet", branch: "design/hardware-ui"),
+        Agent(id: UUID(uuidString: "73659C11-43ED-4AAC-8F18-771B977C6901")!, name: "Codex", harness: "Codex CLI", task: "Implement connector protocol", status: .thinking, updatedAt: .now, provider: .codex, effort: .high, speed: .fast, model: "gpt-5.6-sol", webSearchEnabled: true, branch: "feat/control-deck"),
+        Agent(id: UUID(uuidString: "8FB44C64-D268-4728-BDC8-89C0AC9CAAD2")!, name: "Review", harness: "Codex", task: "Review security boundary", status: .needsInput, updatedAt: .now, provider: .codex, mode: .plan, effort: .xhigh, model: "gpt-5.6-terra", branch: "review/security"),
+        Agent(id: UUID(uuidString: "FC2E5070-041C-4AD2-A90E-959A34AF3BBF")!, name: "Design", harness: "Claude Code", task: "Polish tactile controls", status: .complete, updatedAt: .now, provider: .claudeCode, mode: .acceptEdits, effort: .high, model: "claude-fable-5", branch: "design/hardware-ui"),
         Agent(id: UUID(uuidString: "C8C71A25-245B-4EAB-92A3-A03C39A9FA08")!, name: "Docs", harness: "Generic", task: "Waiting for work", status: .idle, updatedAt: .now),
-        Agent(id: UUID(uuidString: "25D4EE53-91E4-4B40-91EE-B33FE5472A2A")!, name: "Tests", harness: "Codex", task: "Simulator smoke test", status: .error, updatedAt: .now, provider: .codex, effort: .medium, model: "gpt-5.4-mini", branch: "test/smoke")
+        Agent(id: UUID(uuidString: "25D4EE53-91E4-4B40-91EE-B33FE5472A2A")!, name: "Tests", harness: "Codex", task: "Simulator smoke test", status: .error, updatedAt: .now, provider: .codex, effort: .medium, model: "gpt-5.3-codex-spark", branch: "test/smoke")
     ]
 
     private func next<T: Equatable>(after current: T, in values: [T]) -> T? {

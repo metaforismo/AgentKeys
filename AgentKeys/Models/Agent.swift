@@ -69,6 +69,29 @@ enum AgentProvider: String, Codable, CaseIterable, Sendable {
     }
 }
 
+enum AgentModelPresentation {
+    static func label(for identifier: String, provider: AgentProvider) -> String {
+        let normalized = identifier.lowercased()
+        let hasExtendedContext = normalized.hasSuffix("[1m]")
+        let base = hasExtendedContext ? String(normalized.dropLast(4)) : normalized
+
+        let label = switch (provider, base) {
+        case (.codex, "gpt-5.6-sol"): "5.6 Sol"
+        case (.codex, "gpt-5.6-terra"): "5.6 Terra"
+        case (.codex, "gpt-5.6-luna"): "5.6 Luna"
+        case (.codex, "gpt-5.5"): "5.5"
+        case (.codex, "gpt-5.3-codex-spark"): "5.3 Codex Spark"
+        case (.claudeCode, "claude-fable-5"), (.claudeCode, "fable"): "Fable 5"
+        case (.claudeCode, "claude-opus-4-8"), (.claudeCode, "opus"): "Opus 4.8"
+        case (.claudeCode, "claude-sonnet-5"), (.claudeCode, "sonnet"): "Sonnet 5"
+        case (.claudeCode, "claude-haiku-4-5"), (.claudeCode, "claude-haiku-4-5-20251001"), (.claudeCode, "haiku"): "Haiku 4.5"
+        default: identifier
+        }
+
+        return hasExtendedContext ? "\(label) · 1M" : label
+    }
+}
+
 enum AgentMode: String, Codable, CaseIterable, Sendable {
     case manual
     case plan
@@ -184,7 +207,7 @@ struct AgentCapabilities: Codable, Equatable, Sendable {
                 modes: [.manual, .plan],
                 efforts: [.low, .medium, .high, .xhigh],
                 speeds: [.standard, .fast],
-                models: ["gpt-5.4", "gpt-5.4-mini"],
+                models: ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5", "gpt-5.3-codex-spark"],
                 workflows: AgentWorkflow.allCases,
                 supportsBranch: true,
                 supportsResume: true,
@@ -196,7 +219,7 @@ struct AgentCapabilities: Codable, Equatable, Sendable {
                 modes: [.manual, .acceptEdits, .plan, .auto],
                 efforts: [.low, .medium, .high, .xhigh, .max],
                 speeds: [.standard],
-                models: ["sonnet", "opus", "haiku"],
+                models: ["claude-fable-5", "claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"],
                 workflows: AgentWorkflow.allCases,
                 supportsBranch: true,
                 supportsResume: true,
@@ -223,6 +246,10 @@ struct Agent: Identifiable, Codable, Equatable, Sendable {
     var webSearchEnabled: Bool
     var branch: String?
     var capabilities: AgentCapabilities
+
+    var modelDisplayName: String {
+        AgentModelPresentation.label(for: model, provider: provider)
+    }
 
     init(
         id: UUID,
